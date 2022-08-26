@@ -61,7 +61,7 @@ func operators(address:felt) -> (res:felt):
 end
 
 @storage_var
-func additional_rewards()-> (res : Reward*):
+func additional_rewards(index : felt)-> (res : Reward):
 end
 
 @event
@@ -172,7 +172,6 @@ func _verifyTokenOwnershipFor(reward: Reward):
             with_attr error_message("tokenAmount and amount should be 1 as ERC721 is unique"):
                 assert reward.amount = 1
             end
-        end
         else:
             let (balance : Uint256) = IERC1155.balanceOf(contract_address=reward.reward_contract, contract_address, reward.id)
             let (local product : Uint256) = reward.tokenAmount * reward.amount
@@ -180,11 +179,40 @@ func _verifyTokenOwnershipFor(reward: Reward):
                 let (enough) = uint256_le(product, balance)
                 assert_not_zero(enough)
             end
-
         end
-
     end
-    
 
+end
+
+@view
+func get_rewards()->(additional_rewards: Reward*, len_rewards : felt):
+
+end
+
+@external
+func send_reward(player : felt):   
+    alloc_locals
+    let (completed_by) = completed_by.read(address=player)
+    with_attr error_message("Quest already completed by this player"):
+        assert completed_by = true
+    end
+    let (had_at_least_one_reward) = _send_loop_reward{player:player}()
+    with_attr error_message("All rewards have already been distributed"):
+        assert had_at_least_one_reward = TRUE
+    end
+
+    completed_by.write(player, true)
+    reward_sent.emit(player, reward)
+end
+
+# internals
+
+func _send_loop_reward{
+    player : felt,
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}() -> (had_at_least_one_reward : felt):
+    alloc_locals
 
 end
