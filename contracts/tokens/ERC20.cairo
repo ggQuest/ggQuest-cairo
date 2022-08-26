@@ -4,7 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
 from starkware.cairo.common.math import assert_not_zero
 from starkware.cairo.common.uint256 import (
-    Uint256,
+    Uint256, 
     uint256_add,
     uint256_sub,
     uint256_le,
@@ -136,7 +136,7 @@ func ERC20_increaseAllowance{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, ran
     let (local caller) = get_caller_address()
     let (local current_allowance : Uint256) = ERC20_allowances.read(caller, spender)
 
-    let (local new_allowance: Uint256, is_overflow) = unt256.add(current_allowance, added_value)
+    let (local new_allowance: Uint256, is_overflow) = uint256_add(current_allowance, added_value)
     assert (is_overflow) = 0
 
     ERC20_approve(spender, new_allowance)
@@ -151,7 +151,7 @@ func ERC20_decreaseAllowance{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, ran
     let(local current_allowance : Uint256) = ERC20_allowances.read(caller,spender)
 
     let (local new_allowance : Uint256) = uint256_sub(current_allowance, subtracted_value)
-    let (enough_allowance) = uitn256_lt(new_allowance, current_allowance)
+    let (enough_allowance) = uint256_lt(new_allowance, current_allowance)
     assert_not_zero(enough_allowance)
 
     ERC20_approve(spender, new_allowance)
@@ -163,15 +163,15 @@ func ERC20_mint{syscall_ptr : felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
     recipient: felt, amount : Uint256
 ):
     alloc_locals
-    assert_not_zero(amount)
+    uint256_check(amount)
     assert_not_zero(recipient)
 
     let (balance: Uint256) = ERC20_balances.read(account = recipient)
-    let (new_balance, _ : Uint256) = uint256.add(balance, amount)
+    let (new_balance, _ : Uint256) = uint256_add(balance, amount)
     ERC20_balances.write(recipient, new_balance)
 
     let (local supply: Uint256) = ERC20_total_supply.read()
-    let (local new_supply : Uint256, is_overflow) = uint256.add(supply, amount)
+    let (local new_supply : Uint256, is_overflow) = uint256_add(supply, amount)
     assert (is_overflow) = 0
 
     ERC20_total_supply.write(new_supply)
@@ -183,16 +183,16 @@ func ERC20_burn{syscall_ptr : felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 ):
     alloc_locals
     assert_not_zero(account)
-    assert_not_zero(amount)
+    uint256_check(amount)
     let (current_balance : Uint256) = ERC20_balances.read(account)
     let(enough_balance) = uint256_le(amount, current_balance)
     assert_not_zero(enough_balance)
 
-    let(new_balance : Uint256) = uint256.sub(current_balance, amount)
+    let(new_balance : Uint256) = uint256_sub(current_balance, amount)
     ERC20_balances.write(account, new_balance)
 
     let (local supply : Uint256) = ERC20_total_supply.read()
-    let(local new_supply : Uint256) = uitn256_add(supply, amount)
+    let (local new_supply : Uint256) = uint256_sub(supply, amount)
     ERC20_total_supply.write(new_supply)
 
     return ()
@@ -214,14 +214,15 @@ func _transfer{syscall_ptr : felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
     let (enough_balance) = uint256_le(amount, sender_balance)
     assert_not_zero(enough_balance)
 
-    let (new_sender_balance : Uint256) = uint256(sender_balance, amount)
+    let (new_sender_balance : Uint256) = uint256_sub(sender_balance, amount)
     ERC20_balances.write(sender, new_sender_balance)
 
     let (recipient_balance : Uint256) = ERC20_balances.read(account=recipient)
 
-    let (new_recipient_balance : Uint256) = uint256_add(recipient_balance, amount)
-    ERC20_balances.write(recipient, new_receipient_balance)
+    let (new_recipient_balance, _ : Uint256) = uint256_add(recipient_balance, amount)
+    ERC20_balances.write(recipient, new_recipient_balance)
 
     return ()
 
 end
+

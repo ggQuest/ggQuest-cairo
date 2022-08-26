@@ -2,6 +2,20 @@
 
 from starware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.syscalls import (
+    get_contract_address,
+)
+
+from starkware.cairo.common.uint256 import (
+    Uint256, 
+    uint256_add,
+    uint256_sub,
+    uint256_le,
+    uint256_lt,
+    uint256_check,
+)
+
+from contracts.token.IERC20 import IERC20
 
 # enum-like
 struct RewardType:
@@ -13,8 +27,8 @@ end
 struct Reward:
     member reward_type: RewardType
     member reward_contract: felt
-    member token_amount: felt
-    member amount: felt
+    member token_amount: Uint256
+    member amount: Uint256
     member id: felt
 end
 
@@ -132,10 +146,45 @@ func add_reward(reward : Reward) -> (res:felt):
 
 end
 
+#should be provate view
 func _verifyTokenOwnershipFor(reward: Reward):
+    alloc_locals
+    let (contract_address) = get_contract_address()
+
     if reward.reward_type == RewardType.ERC20:
-        with_attr error_message("):
+        let (balance : Uint256) = IERC20.balanceOf(contract_address=reward.reward_contract, account=contract_address)
+        let (local product : Uint256) = reward.tokenAmount * reward.amount
+        with_attr error_message("ggQuest contract doesn't own enough tokens"):
+            let (enough) = uint256_le(product, balance)
+            assert_not_zero(enough)
+        end
+    else: 
+        if reward.reward_type == RewardType.ERC721:
+            let (owner) = IERC721.ownerOf(contract_address=reward.reward_contract, reward.id)
+            with_attr error_message("ggQuests contract doesn't own this ERC721 token"):
+                assert owner = contract_address
+            end
+
+            with_attr error_message("tokenAmount and amount should be 1 as ERC721 is unique"):
+                assert reward.tokenAmount = 1
+            end
+
+            with_attr error_message("tokenAmount and amount should be 1 as ERC721 is unique"):
+                assert reward.amount = 1
+            end
+        end
+        else:
+            let (balance : Uint256) = IERC1155.balanceOf(contract_address=reward.reward_contract, contract_address, reward.id)
+            let (local product : Uint256) = reward.tokenAmount * reward.amount
+            with_attr error_message("ggQuests contract doesn't own enough tokens"):
+                let (enough) = uint256_le(product, balance)
+                assert_not_zero(enough)
+            end
 
         end
+
+    end
+    
+
 
 end
