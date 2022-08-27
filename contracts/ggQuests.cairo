@@ -74,6 +74,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     gamesMetadataBaseURI.write(_gamesMetadataBaseURI)
     questsMetadatBaseURI.write(_questsMetadataBaseURI)
     operators.write(caller_address, true)
+    return ()
 end
 
 @event
@@ -98,12 +99,15 @@ end
 func add_operator(operator : felt):
     operators.write(operator, true)
     operator_added.emit(operator=operator)
+    return ()
 end
 
 @external
 func remove_operator(operator: felt):
     operators.write(operator, false)
     operator_removed.emit(operator)
+    return ()
+
 end
 
 @external
@@ -149,11 +153,16 @@ end
 @external
 func add_quest_operator(quest_id : felt, address : felt):
     #todo
+
+    return ()
+
 end
 
 @external
 func remove_quest_operator(quest_id : felt, address : felt):
     #todo
+    return ()
+
 end
 
 @external

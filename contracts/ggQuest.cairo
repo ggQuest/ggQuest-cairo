@@ -116,6 +116,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     profiles.write(gg_profiles_contract)
     let (caller) = get_caller_adddress()
     operators.write(caller, true)
+    return ()
 end
 
 @view
@@ -137,12 +138,16 @@ end
 func add_operator(operator:felt):
     operators.write(operator, true)
     operator_added.emit(operator)
+
+    return ()
 end
 
 @external
 func remove_operator(operator:felt):
     operators.write(operator, false)
     operator_removed(operator)
+
+    return ()
 end
 
 @view
@@ -206,6 +211,8 @@ func _verifyTokenOwnershipFor(reward: Reward):
         end
     end
 
+    return ()
+
 end
 
 @view
@@ -235,9 +242,18 @@ func send_reward(player : felt):
 
     let (profiles) = profiles.read()
     let (reputation_reward) = reputation_reward.read()
-    IggProfiles.increaseReputation(contract_address=profiles, player, reputation_reward)
+    IggProfiles.increase_reputation(contract_address=profiles, player, reputation_reward)
 
     reward_sent.emit(player, reward)
+end
+
+@external
+func increase_reward_amount(amount : Uint256, reward : Reward):
+    let (exists) = _increase_reward_token{stop=stop, amount=amount, reward=reward}(start)
+    with_attr error_message("Given reward (token address) doesn't exist for this quest"):
+        assert exists = TRUE
+    end
+    return ()
 end
 
 # internals
