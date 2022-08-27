@@ -3,7 +3,8 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import (
-    get_contract_address,
+    get_caller_address,
+    get_contract_address
 )
 
 from starkware.cairo.common.uint256 import (
@@ -13,10 +14,12 @@ from starkware.cairo.common.uint256 import (
     uint256_le,
     uint256_lt,
     uint256_check,
+    assert_not_zero
 )
 
 from contracts.tokens.ERC20.IERC20 import IERC20
 from contracts.tokens.ERC721.IERC721 import IERC721
+#from contracts.tokens.ERC1155.IERC1155 import IERC1155
 
 from contracts.interfaces.IggProfiles import IggProfiles
 
@@ -116,15 +119,15 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     metadata_URL.write(metadata_URL)
     reputation_reward.write(reputation_reward)
     profiles.write(gg_profiles_contract)
-    let (caller) = get_caller_adddress()
-    operators.write(caller, true)
+    let (caller) = get_caller_address()
+    operators.write(caller, 1)
 
     return ()
 end
 
 @view
 func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-) -> (rewards : Reward*, rewards_len : felt):
+) -> (rewards_len : felt , rewards : Reward*):
     alloc_locals
     let (rewards_len) = additional_rewards_len.read()
     let (local rewards_array : Reward*) = alloc()
@@ -133,12 +136,12 @@ func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     # to add a check if its zero
 
     _get_additional_rewards{rewards_array=rewards_array, stop=stop}(start)
-    return (rewards=rewards_array, rewards_len=rewards_len)
+    return (rewards_len=rewards_len, rewards=rewards_array)
 end
 
 @view
 func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-) -> (players : felt*, players_len : felt):
+) -> (players_len : felt, players : felt*):
     alloc_locals
     let (players_len) = players_len.read()
     let (local players_array : felt*) = alloc()
@@ -147,7 +150,7 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     # to add a check if its zero
 
     _get_players{players_array=players_array, stop=stop}(start)
-    return (players=players_array, players_len=players_len)
+    return (players_len=players_len, players=players_array)
 end
 
 
@@ -199,7 +202,7 @@ end
 func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):
-    operators.write(operator, true)
+    operators.write(operator, 1)
     operator_added.emit(operator)
 
     return ()
@@ -209,7 +212,7 @@ end
 func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):
-    operators.write(operator, false)
+    operators.write(operator, 0)
     operator_removed(operator)
 
     return ()
@@ -221,7 +224,7 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
 ) -> (res : Uint256):
     let (active) = is_active.read()
     with_attr error_message("Rewards cannot be added after quest activation"):
-        assert active = FALSE
+        assert active = 0
     end
 
     # Verify if rewards are unique (not twice the same ERC721 for example)
@@ -252,14 +255,14 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     alloc_locals
     let (completed_by) = completed_by.read(address=player)
     with_attr error_message("Quest already completed by this player"):
-        assert completed_by = TRUE
+        assert completed_by = 1
     end
     let start = Uint256(0,0)
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
     let (had_at_least_one_reward) = _send_loop_reward{player=player, stop=stop}(start)
     with_attr error_message("All rewards have already been distributed"):
-        assert had_at_least_one_reward = TRUE
+        assert had_at_least_one_reward = 1
     end
     
     let (players_len) = players_len.read()
@@ -267,12 +270,14 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     # push player in players array
     players.write(players_len, player)
     players_len.write(players_len + 1)
-    completed_by.write(player, true)
+    completed_by.write(player, 1)
 
     let (profiles) = profiles.read()
     let (reputation_reward) = reputation_reward.read()
     IggProfiles.increase_reputation(contract_address=profiles, player, reputation_reward)
 
+    #todo 
+    let (local reward : Reward) = Reward(RewardType.ERC20, 0, Uint256(0,0), Uint256(0,0), 0)
     reward_sent.emit(player, reward)
 end
 
@@ -285,7 +290,7 @@ func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let stop = rewards_len
     let (exists) = _increase_reward_token{stop=stop, amount=amount, reward=reward}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
-        assert exists = TRUE
+        assert exists = 1
     end
     return ()
 end
@@ -302,7 +307,7 @@ end
 @external
 func activate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ):
-    is_active.write(TRUE)
+    is_active.write(1)
     quest_activated.emit()
     return ()
 end
@@ -311,12 +316,12 @@ end
 func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     withdrawal_address : felt
 ):
-    is_active.write(FALSE)
+    is_active.write(0)
     # transfer all tokens
     let start = Uint256(0,0)
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    _transfer_tokens{stop=stop, withdraw_address=withdraw_address}(start)
+    _transfer_tokens{stop=stop, withdraw_address=withdrawal_address}(start)
     quest_deactivated.emit()
     return ()
 end
@@ -439,6 +444,26 @@ func _verifyUniquenessOfRewards{
 }():
 
     return ()
+end
+
+func _increase_reward_token{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    stop : felt, 
+    amount : felt, 
+    reward : Reward
+}(start : Uint256):
+
+end
+
+func _transfer_tokens{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    stop : felt,
+    withdraw_address : felt
+}(start : Uint256):
 end
 
 func _send_loop_reward{
