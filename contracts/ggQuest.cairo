@@ -150,31 +150,12 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     return (players=players_array, players_len=players_len)
 end
 
-@view
-func get_players_array{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-) -> (players : felt*, len_players : Uint256):
-    let (players_struct) = players.read()
-    return (
-        players_struct.players_arr,
-        players_struct.len_players
-    )
-end
 
 @view
 func get_quest_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
     let (metadata_URL) = metadata_URL.read()
     return (res=metadata_URL)
-end
-
-@view
-func get_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-)->(additional_rewards : Reward*, len_rewards : Uint256):
-    let (additional_rewards_struct) = additional_rewards.read()
-    return (
-        additional_rewards_struct.additional_rewards_arr,
-        additional_rewards_struct.len_additional_rewards
-    )
 end
 
 @view
@@ -245,20 +226,22 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
 
     # Verify if rewards are unique (not twice the same ERC721 for example)
     let start = Uint256(0,0)
-    let (additional_rewards_struct) = additional_rewards.read()
-    let stop = additional_rewards_struct.len_additional_rewards
-
+    let (rewards_len) = additional_rewards_len.read()
+    let stop = rewards_len
     _verifyUniquenessOfRewards{stop=stop, reward=reward}(start)
 
     verifyTokenOwnershipFor(reward)
     # todo
     # loop to check if rewards are unique
 
-    reward_added.emit(reward)
-    let one = Uint256(1,1)
-    let (res : Uint256) = uint256_sub(additional_rewards_struct.len_additional_rewards, one)
+    additional_rewards.write(rewards_len, reward)
+    additional_rewards_len.write(rewards_len + 1)
 
-    return (res=res)
+    reward_added.emit(reward)
+    #let one = Uint256(1,1)
+    #let (res : Uint256) = uint256_sub(rewards_len, one)
+
+    return (res=rewards_len - 1)
 
 end
 
@@ -272,16 +255,18 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
         assert completed_by = TRUE
     end
     let start = Uint256(0,0)
-    let (struct_rewards) = get_additional_rewards()
-    let stop = struct_rewards.len_additional_rewards
+    let (rewards_len) = additional_rewards_len.read()
+    let stop = rewards_len
     let (had_at_least_one_reward) = _send_loop_reward{player=player, stop=stop}(start)
     with_attr error_message("All rewards have already been distributed"):
         assert had_at_least_one_reward = TRUE
     end
     
-    let (players_struct) = get_players()
+    let (players_len) = players_len.read()
+
     # push player in players array
-    _push_to_players(players_struct, player)
+    players.write(players_len, player)
+    players_len.write(players_len + 1)
     completed_by.write(player, true)
 
     let (profiles) = profiles.read()
@@ -296,8 +281,8 @@ func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     amount : Uint256, reward : Reward
 ):
     let start = Uint256(0,0)
-    let (struct_rewards) = get_additional_rewards()
-    let stop = struct_rewards.len_additional_rewards    
+    let (rewards_len) = additional_rewards_len.read()
+    let stop = rewards_len
     let (exists) = _increase_reward_token{stop=stop, amount=amount, reward=reward}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
         assert exists = TRUE
@@ -329,8 +314,8 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     is_active.write(FALSE)
     # transfer all tokens
     let start = Uint256(0,0)
-    let (struct_rewards) = get_additional_rewards()
-    let stop = struct_rewards.len_additional_rewards
+    let (rewards_len) = additional_rewards_len.read()
+    let stop = rewards_len
     _transfer_tokens{stop=stop, withdraw_address=withdraw_address}(start)
     quest_deactivated.emit()
     return ()
@@ -466,25 +451,6 @@ func _send_loop_reward{
     alloc_locals
 
 
-end
-
-func _push_to_players{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}(_struct : PlayersStruct, player : felt):
-
-    return ()
-end
-
-func _push_to_rewards{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr,
-}(_struct : AdditionalRewardsStruct, reward : Reward):
-    
-
-    return ()
 end
 
 func _get_additional_rewards{
