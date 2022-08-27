@@ -1,6 +1,6 @@
 %lang starknet
 
-from starware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import (
     get_contract_address,
@@ -15,7 +15,7 @@ from starkware.cairo.common.uint256 import (
     uint256_check,
 )
 
-from contracts.token.IERC20 import IERC20
+from contracts.tokens.IERC20 import IERC20
 from contracts.interfaces.IggProfiles import IggProfiles
 
 # enum-like
@@ -155,13 +155,15 @@ func get_players_array{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_c
 end
 
 @view
-func get_quest_URI()-> (res : felt):
+func get_quest_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+)-> (res : felt):
     let (metadata_URL) = metadata_URL.read()
     return (res=metadata_URL)
 end
 
 @view
-func get_rewards()->(additional_rewards : Reward*, len_rewards : Uint256):
+func get_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+)->(additional_rewards : Reward*, len_rewards : Uint256):
     let (additional_rewards_struct) = additional_rewards.read()
     return (
         additional_rewards_struct.additional_rewards_arr,
@@ -170,37 +172,46 @@ func get_rewards()->(additional_rewards : Reward*, len_rewards : Uint256):
 end
 
 @view
-func is_operator(operator : felt) -> (res : felt):
+func is_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    operator : felt
+) -> (res : felt):
     let (res) = operators.read(operator)
     return (res)
 end
 
 @view
-func get_active() -> (res : felt):
+func get_active{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (res : felt):
     let (res) = is_active.read()
     return (res)
 end
 
 @view
-func is_completed_by(address : felt) -> (res : felt):
+func is_completed_by{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    address : felt
+) -> (res : felt):
     let (completed_by) = completed_by.read(address)
     return (res=completed_by)
 end
 
 @view
-func get_ggProfile_address()-> (res : felt):
+func get_ggProfile_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+)-> (res : felt):
     let (contract) = profiles.read()
     return (res=contract)
 end
 
 @view
-func get_reputation_reward()-> (res : felt):
+func get_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+)-> (res : felt):
     let (reputation_reward) = reputation_reward.read()
     return (res=reputation_reward)
 end
 
 @external
-func add_operator(operator : felt):
+func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    operator : felt
+):
     operators.write(operator, true)
     operator_added.emit(operator)
 
@@ -208,7 +219,9 @@ func add_operator(operator : felt):
 end
 
 @external
-func remove_operator(operator : felt):
+func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    operator : felt
+):
     operators.write(operator, false)
     operator_removed(operator)
 
@@ -216,7 +229,9 @@ func remove_operator(operator : felt):
 end
 
 @external
-func add_reward(reward : Reward) -> (res : Uint256):
+func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    reward : Reward
+) -> (res : Uint256):
     let (active) = is_active.read()
     with_attr error_message("Rewards cannot be added after quest activation"):
         assert active = FALSE
@@ -242,7 +257,9 @@ func add_reward(reward : Reward) -> (res : Uint256):
 end
 
 @external
-func send_reward(player : felt):   
+func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    player : felt
+):   
     alloc_locals
     let (completed_by) = completed_by.read(address=player)
     with_attr error_message("Quest already completed by this player"):
@@ -269,7 +286,9 @@ func send_reward(player : felt):
 end
 
 @external
-func increase_reward_amount(amount : Uint256, reward : Reward):
+func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    amount : Uint256, reward : Reward
+:
     let start = Uint256(0,0)
     let (struct_rewards) = get_additional_rewards()
     let stop = struct_rewards.len_additional_rewards    
@@ -281,21 +300,26 @@ func increase_reward_amount(amount : Uint256, reward : Reward):
 end
 
 @external
-func update_reputation_reward(new_value : felt):
+func update_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    new_value : felt
+):
     reputation_reward.write(new_value)
     reputation_reward_updated.emit(new_value)
     return ()
 end
 
 @external
-func activate_quest():
+func activate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+):
     is_active.write(TRUE)
     quest_activated.emit()
     return ()
 end
 
 @external
-func deactivate_quest(withdrawal_address : felt):
+func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    withdrawal_address : felt
+):
     is_active.write(FALSE)
     # transfer all tokens
     let start = Uint256(0,0)
@@ -309,7 +333,9 @@ end
 
 # private functions
 
-func verifyTokenOwnershipFor(reward: Reward):
+func verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    reward: Reward
+):
     alloc_locals
     let (contract_address) = get_contract_address()
 
@@ -350,7 +376,9 @@ end
 
 
 
-func withdraw_reward(reward_id : felt, withdrawal_address : felt);
+func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    reward_id : felt, withdrawal_address : felt
+):
     let (additional_reward_struct) = additional_rewards.read()
     let rewards_arr = additional_reward_struct.additional_rewards_arr
     let reward_type = rewards_arr[reward_id].reward_type
@@ -391,7 +419,7 @@ func withdraw_reward(reward_id : felt, withdrawal_address : felt);
                 withdrawal_address,
                 amount,
                 balance,
-                ""
+                
             )
             with_attr error_message("transfer ERC1155 failed"):
                 assert_not_zero(success)
@@ -404,7 +432,9 @@ end
 
 # internals
 
-func _reward_hash(reward : Reward) -> (bytes : felt):
+func _reward_hash{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    reward : Reward
+) -> (bytes : felt):
     #todo
 end
 
@@ -436,7 +466,7 @@ func _push_to_players{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(struct : PlayersStruct, player : felt):
+}(_struct : PlayersStruct, player : felt):
 
     return ()
 end
@@ -445,7 +475,7 @@ func _push_to_rewards{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(struct : AdditionalRewardsStruct, reward : Reward):
+}(_struct : AdditionalRewardsStruct, reward : Reward):
     
 
     return ()
