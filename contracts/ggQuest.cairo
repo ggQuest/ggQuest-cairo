@@ -249,10 +249,39 @@ end
 
 @external
 func increase_reward_amount(amount : Uint256, reward : Reward):
+    let start = Uint256(0,0)
+    let (struct_rewards) = get_additional_rewards()
+    let (stop) = struct_rewards.len_additional_rewards    
     let (exists) = _increase_reward_token{stop=stop, amount=amount, reward=reward}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
         assert exists = TRUE
     end
+    return ()
+end
+
+@external
+func update_reputation_reward(new_value : felt):
+    reputation_reward.write(new_value)
+    reputation_reward_updated.emit(new_value)
+    return ()
+end
+
+@external
+func activate_quest():
+    is_active.write(TRUE)
+    quest_activated.emit()
+    return ()
+end
+
+@external
+func deactivate_quest(withdraw_address):
+    is_active.write(FALSE)
+    # transfer all tokens
+    let start = Uint256(0,0)
+    let (struct_rewards) = get_additional_rewards()
+    let (stop) = struct_rewards.len_additional_rewards
+    _transfer_tokens{stop=stop, withdraw_address=withdraw_address}(start)
+    quest_deactivated.emit()
     return ()
 end
 
