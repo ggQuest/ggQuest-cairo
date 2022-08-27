@@ -16,6 +16,7 @@ from starkware.cairo.common.uint256 import (
 )
 
 from contracts.token.IERC20 import IERC20
+from contracts.interfaces.IggProfiles import IggProfiles
 
 # enum-like
 struct RewardType:
@@ -44,19 +45,19 @@ end
 
 
 @storage_var
-func metadata_URL() -> (res: felt):
+func metadata_URL() -> (res : felt):
 end
 
 @storage_var
-func reputation_reward() -> (res: felt):
+func reputation_reward() -> (res : felt):
 end
 
 @storage_var
-func is_active() -> (res: felt):
+func is_active() -> (res : felt):
 end
 
 @storage_var
-func profiles()->(res: ggProfile):
+func profiles()->(res : felt):
 end
 
 
@@ -112,8 +113,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 ):
     metadata_URL.write(metadata_URL)
     reputation_reward.write(reputation_reward)
-    let (gg_profile) = ggProfiles
-    profiles.write()
+    profiles.write(gg_profiles_contract)
     let (caller) = get_caller_adddress()
     operators.write(caller, true)
 end
@@ -230,8 +230,13 @@ func send_reward(player : felt):
     
     let (players_struct) = get_players()
     # push player in players array
-    _push_to_arr(players_struct, player)
+    _push_to_players(players_struct, player)
     completed_by.write(player, true)
+
+    let (profiles) = profiles.read()
+    let (reputation_reward) = reputation_reward.read()
+    IggProfiles.increaseReputation(contract_address=profiles, player, reputation_reward)
+
     reward_sent.emit(player, reward)
 end
 
