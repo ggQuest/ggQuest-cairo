@@ -288,7 +288,7 @@ end
 @external
 func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     amount : Uint256, reward : Reward
-:
+):
     let start = Uint256(0,0)
     let (struct_rewards) = get_additional_rewards()
     let stop = struct_rewards.len_additional_rewards    
@@ -397,7 +397,7 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
         let (amount) = rewards_arr[reward_id].id
 
         if reward_type ==  RewardType.ERC721 :
-            let (success) = IERC20.transferFrom(
+            let (success) = IERC721.transferFrom(
                 contract_address=reward_contract, 
                 contract_address, 
                 withdrawal_address,
@@ -419,7 +419,7 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
                 withdrawal_address,
                 amount,
                 balance,
-                
+                0
             )
             with_attr error_message("transfer ERC1155 failed"):
                 assert_not_zero(success)
