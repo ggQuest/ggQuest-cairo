@@ -66,3 +66,35 @@ func isApprovedForAll{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     return (is_approved)
 end
 
+
+@external
+func approve{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    to : felt, token_id : Uint256
+):  
+    ERC721.approve(to, token_id)
+    return ()
+end
+
+@external
+func setApprovalForAll{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    operator : felt, approved : felt
+):
+    ERC721.set_approval_for_all(operator, approved)
+    return ()
+end
+
+@external
+func transferFrom{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}(
+    _from : felt, to : felt, token_id : Uint256
+):
+    ERC721.transfer_from(_from, to, token_id)
+    return ()
+end
+
+@external
+func safeTransferFrom{pedersen_ptr : HashBuiltin*, syscall_ptr : felt*, range_check_ptr}(
+    _from : felt, to : felt, token_id : Uint256, data_len : felt, data : felt*
+):
+    ERC721.safe_transfer_from(_from, to, token_id, data_len, data)
+    return ()
+end

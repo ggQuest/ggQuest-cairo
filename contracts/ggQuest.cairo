@@ -15,7 +15,9 @@ from starkware.cairo.common.uint256 import (
     uint256_check,
 )
 
-from contracts.tokens.IERC20 import IERC20
+from contracts.tokens.ERC20.IERC20 import IERC20
+from contracts.tokens.ERC721.IERC721 import IERC721
+
 from contracts.interfaces.IggProfiles import IggProfiles
 
 # enum-like
