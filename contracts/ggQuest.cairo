@@ -133,6 +133,12 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     return (players)
 end
 
+@view
+func get_quest_URI()-> (res : felt):
+    let (metadata_URL) = metadata_URL.read()
+    return (res=metadata_URL)
+end
+
 
 @external
 func add_operator(operator:felt):
@@ -274,7 +280,7 @@ func activate_quest():
 end
 
 @external
-func deactivate_quest(withdraw_address):
+func deactivate_quest(withdrawal_address : felt):
     is_active.write(FALSE)
     # transfer all tokens
     let start = Uint256(0,0)
@@ -285,7 +291,63 @@ func deactivate_quest(withdraw_address):
     return ()
 end
 
+
+
+# private
+func withdraw_reward(reward_id : felt, withdrawal_address : felt);
+    let (additional_reward_struct) = additional_rewards.read()
+    let rewards_arr = additional_reward_struct.additional_rewards_arr
+    let reward_type = rewards_arr[reward_id].reward_type
+    let reward_contract = rewards_arr[reward_id].reward_contract
+
+    let (contract_address) = get_contract_address
+
+    if reward_type == RewardType.ERC20 :
+        let (balance : Uint256) = IERC20.balanceOf(contract_address=reward_contract, account=contract_address)
+        let (success) = IERC20.transfer(contract_address=reward_contract, balance)
+        with_attr error_message("transfer ERC20 failed"):
+            assert_not_zero(success)
+        end
+    else:
+        
+        let (amount) = rewards_arr[reward_id].id
+
+        if reward_type ==  RewardType.ERC721 :
+            let (success) = IERC20.transferFrom(
+                contract_address=reward_contract, 
+                contract_address, 
+                withdrawal_address,
+                amount
+            )
+            with_attr error_message("transfer ERC721 failed"):
+                assert_not_zero(success)
+            end
+
+        else:
+            let (balance : Uint256) = IERC1155.balanceOf(
+                contract_address=reward_contract,
+                contract_address,
+                amount
+            )
+            let (success) = IERC1155.safeTransferFrom(
+                contract_address=reward_contract,
+                contract_address,
+                withdrawal_address,
+                amount,
+                balance,
+                ""
+            )
+            with_attr error_message("transfer ERC1155 failed"):
+                assert_not_zero(success)
+            end
+    return ()
+end
+
 # internals
+
+func _reward_hash(reward : Reward) -> (bytes : felt):
+    #todo
+end
 
 func _send_loop_reward{
     player : felt,
