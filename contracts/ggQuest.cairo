@@ -35,16 +35,23 @@ struct Reward:
     member id: felt
 end
 
-struct PlayersStruct:
-    member len_players : Uint256
-    member players_arr : felt*
+
+
+@storage_var
+func players(index : felt) -> (player : felt):
+end 
+
+@storage_var
+func players_len() -> (len : felt):
 end
 
-struct AdditionalRewardsStruct: 
-    member len_additional_rewards : Uint256
-    member additional_rewards_arr : Reward*
+@storage_var
+func additional_rewards(index : felt)->(additional_reward : Reward):
 end
 
+@storage_var
+func additional_rewards_len() -> (len : felt):
+end
 
 @storage_var
 func metadata_URL() -> (res : felt):
@@ -63,10 +70,6 @@ func profiles()->(res : felt):
 end
 
 @storage_var
-func players() -> (res : PlayersStruct):
-end
-
-@storage_var
 func completed_by(address : felt)->(res : felt):
 end
 
@@ -74,9 +77,6 @@ end
 func operators(address : felt) -> (res : felt):
 end
 
-@storage_var
-func additional_rewards()-> (res : AdditionalRewardsStruct):
-end
 
 @event
 func operator_added(operator : felt):
@@ -119,31 +119,35 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let (caller) = get_caller_adddress()
     operators.write(caller, true)
 
-    # init players array & struct
-    let (local players_arr : felt*) = alloc()
-    let players_struct = PlayersStruct(len_players=Uint256(0,0), players_arr=players_arr)
-    players.write(players_struct)
-
-    # init additionalRewards array & struct
-    let (local additional_rewards_arr : Reward*) = alloc()
-    let additional_rewards_struct = AdditionalRewardsStruct(len_additional_rewards=Uint256(0,0), additional_rewards_arr=additional_rewards_arr)
-    additional_rewards.write(additional_rewards_struct)
-
     return ()
 end
 
 @view
 func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-) -> (rewards : AdditionalRewardsStruct):
-    let (rewards) = additional_rewards.read()
-    return (rewards)
+) -> (rewards : Reward*, rewards_len : felt):
+    alloc_locals
+    let (rewards_len) = additional_rewards_len.read()
+    let (local rewards_array : Reward*) = alloc()
+    let start = Uint256(0,0)
+    let stop = rewards_len
+    # to add a check if its zero
+
+    _get_additional_rewards{rewards_array=rewards_array, stop=stop}(start)
+    return (rewards=rewards_array, rewards_len=rewards_len)
 end
 
 @view
 func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-) -> (players : PlayersStruct):
-    let (players) = players.read()
-    return (players)
+) -> (players : felt*, players_len : felt):
+    alloc_locals
+    let (players_len) = players_len.read()
+    let (local players_array : felt*) = alloc()
+    let start = Uint256(0,0)
+    let stop = players_len
+    # to add a check if its zero
+
+    _get_players{players_array=players_array, stop=stop}(start)
+    return (players=players_array, players_len=players_len)
 end
 
 @view
@@ -481,4 +485,24 @@ func _push_to_rewards{
     
 
     return ()
+end
+
+func _get_additional_rewards{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    rewards_array : Reward*,
+    stop : felt,
+}(start : Uint256):
+
+end
+
+func _get_players{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    players_array : Reward*,
+    stop : felt,
+}(start : Uint256):
+
 end
