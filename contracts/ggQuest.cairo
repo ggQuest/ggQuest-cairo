@@ -262,7 +262,12 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let start = Uint256(0,0)
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    let (had_at_least_one_reward) = _send_loop_reward{player=player, stop=stop}(start)
+    local had_at_least_one_reward = 0
+    _send_loop_reward{
+        player=player, 
+        stop=stop, 
+        had_at_least_one_reward=had_at_least_one_reward
+    }(start)
     with_attr error_message("All rewards have already been distributed"):
         assert had_at_least_one_reward = 1
     end
@@ -469,15 +474,37 @@ func _transfer_tokens{
 end
 
 func _send_loop_reward{
-    player : felt,
-    stop : felt,
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}(start : felt) -> (had_at_least_one_reward : felt):
+    player : felt,
+    stop : felt,
+    had_at_least_one_reward : felt
+}(start : felt):
     alloc_locals
+    let (reward : Reward) = additional_rewards.read(start)
+    let (players_len : felt) = players_len.read()
+    let (enough_rewards) = uint256_le(players_len, reward.amount)
+    
+    if enough_rewards == 1 :
+        tempvar had_at_least_one_reward = 1
+        let token_address = reward.reward_contract
 
+        if reward.reward_type == RewardType.ERC20:
+            IERC20.transfer(contract_address=token_address, player, reward.token_amount)
+        else:
+            if reward.reward_type == RewardType.ERC721:
+            let (contract_add) = get_contract_address()
+                IERC721.safeTransferFrom(contract_address=token_address, contract_add, player, reward_id)
+            else :
+                IERC1155.safeTransferFrom(contract_address=token_address, contract_add, player, reward_id, reward.token_amount, 0)
+            end
+        end
+    end
+    let (next_start, _) = uint256_add(start, Uint256(1, 0))
+    _send_loop_reward(next_start)
 
+    return ()
 end
 
 func _get_additional_rewards{
