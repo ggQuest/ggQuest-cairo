@@ -34,12 +34,12 @@ struct Reward:
 end
 
 struct PlayersStruct:
-    member len_players : felt
+    member len_players : Uint256
     member players_arr : felt*
 end
 
 struct AdditionalRewardsStruct: 
-    member len_additional_rewards : felt
+    member len_additional_rewards : Uint256
     member additional_rewards_arr : Reward*
 end
 
@@ -60,9 +60,8 @@ end
 func profiles()->(res : felt):
 end
 
-
 @storage_var
-func players() -> (res : felt*):
+func players() -> (res : PlayersStruct):
 end
 
 @storage_var
@@ -110,12 +109,24 @@ end
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr} (
     gg_profiles_contract : felt, reputation_reward : felt, metadata_URL : felt
-):
+):  
+    alloc_locals
     metadata_URL.write(metadata_URL)
     reputation_reward.write(reputation_reward)
     profiles.write(gg_profiles_contract)
     let (caller) = get_caller_adddress()
     operators.write(caller, true)
+
+    # init players array & struct
+    let (local players_arr : felt*) = alloc()
+    let players_struct = PlayersStruct(len_players=Uint256(0,0), players_arr=players_arr)
+    players.write(players_struct)
+
+    # init players array & struct
+    let (local additional_rewards_arr : Reward*) = alloc()
+    let additional_rewards_struct = AdditionalRewardsStruct(len_additional_rewards=Uint256(0,0), additional_rewards_arr=additional_rewards_arr)
+    additional_rewards.write(additional_rewards_struct)
+
     return ()
 end
 
@@ -139,6 +150,21 @@ func get_quest_URI()-> (res : felt):
     return (res=metadata_URL)
 end
 
+@view
+func get_rewards()->(additional_rewards: Reward*, len_rewards : felt):
+    let (additional_rewards_struct) = additional_rewards.read()
+    return (
+        additional_rewards_struct.additional_rewards_arr,
+        additional_rewards_struct.len_additional_rewards
+    )
+end
+
+@view
+func is_operator(operator:felt) -> (res:felt):
+    let (res) = operators.read(operator)
+    return (res)
+end
+
 
 @external
 func add_operator(operator:felt):
@@ -156,33 +182,101 @@ func remove_operator(operator:felt):
     return ()
 end
 
-@view
-func is_operator(operator:felt) -> (res:felt):
-    let (res) = operators.read(operator)
-    return (res)
-end
-
 @external
-func add_reward(reward : Reward) -> (res:felt):
+func add_reward(reward : Reward) -> (res : Uint256):
     let (active) = is_active.read()
     with_attr error_message("Rewards cannot be added after quest activation"):
-        assert active = false
+        assert active = FALSE
     end
 
-    _verifyTokenOwnershipFor(reward)
+    # Verify if rewards are unique (not twice the same ERC721 for example)
+    let start = Uint256(0,0)
+    let (additional_rewards_struct) = additional_rewards.read()
+    let stop = additional_rewards_struct.len_additional_rewards
+
+    _verifyUniquenessOfRewards{stop=stop, reward=reward}(start)
+
+    verifyTokenOwnershipFor(reward)
     # todo
     # loop to check if rewards are unique
 
     reward_added.emit(reward)
+    let one = Uint256(1,1)
+    let (res : Uint256) = uint256_sub(additional_rewards_struct.len_additional_rewards, one)
 
-    let (res) = # todo
-
-    return (res)
+    return (res=res)
 
 end
 
-#should be provate view
-func _verifyTokenOwnershipFor(reward: Reward):
+@external
+func send_reward(player : felt):   
+    alloc_locals
+    let (completed_by) = completed_by.read(address=player)
+    with_attr error_message("Quest already completed by this player"):
+        assert completed_by = TRUE
+    end
+    let start = Uint256(0,0)
+    let (struct_rewards) = get_additional_rewards()
+    let stop = struct_rewards.len_additional_rewards
+    let (had_at_least_one_reward) = _send_loop_reward{player=player, stop=stop}(start)
+    with_attr error_message("All rewards have already been distributed"):
+        assert had_at_least_one_reward = TRUE
+    end
+    
+    let (players_struct) = get_players()
+    # push player in players array
+    _push_to_players(players_struct, player)
+    completed_by.write(player, true)
+
+    let (profiles) = profiles.read()
+    let (reputation_reward) = reputation_reward.read()
+    IggProfiles.increase_reputation(contract_address=profiles, player, reputation_reward)
+
+    reward_sent.emit(player, reward)
+end
+
+@external
+func increase_reward_amount(amount : Uint256, reward : Reward):
+    let start = Uint256(0,0)
+    let (struct_rewards) = get_additional_rewards()
+    let stop = struct_rewards.len_additional_rewards    
+    let (exists) = _increase_reward_token{stop=stop, amount=amount, reward=reward}(start)
+    with_attr error_message("Given reward (token address) doesn't exist for this quest"):
+        assert exists = TRUE
+    end
+    return ()
+end
+
+@external
+func update_reputation_reward(new_value : felt):
+    reputation_reward.write(new_value)
+    reputation_reward_updated.emit(new_value)
+    return ()
+end
+
+@external
+func activate_quest():
+    is_active.write(TRUE)
+    quest_activated.emit()
+    return ()
+end
+
+@external
+func deactivate_quest(withdrawal_address : felt):
+    is_active.write(FALSE)
+    # transfer all tokens
+    let start = Uint256(0,0)
+    let (struct_rewards) = get_additional_rewards()
+    let stop = struct_rewards.len_additional_rewards
+    _transfer_tokens{stop=stop, withdraw_address=withdraw_address}(start)
+    quest_deactivated.emit()
+    return ()
+end
+
+
+# private functions
+
+func verifyTokenOwnershipFor(reward: Reward):
     alloc_locals
     let (contract_address) = get_contract_address()
 
@@ -221,79 +315,8 @@ func _verifyTokenOwnershipFor(reward: Reward):
 
 end
 
-@view
-func get_rewards()->(additional_rewards: Reward*, len_rewards : felt):
-
-end
-
-@external
-func send_reward(player : felt):   
-    alloc_locals
-    let (completed_by) = completed_by.read(address=player)
-    with_attr error_message("Quest already completed by this player"):
-        assert completed_by = true
-    end
-    let start = Uint256(0,0)
-    let (struct_rewards) = get_additional_rewards()
-    let (stop) = struct_rewards.len_additional_rewards
-    let (had_at_least_one_reward) = _send_loop_reward{player=player, stop=stop}(start)
-    with_attr error_message("All rewards have already been distributed"):
-        assert had_at_least_one_reward = TRUE
-    end
-    
-    let (players_struct) = get_players()
-    # push player in players array
-    _push_to_players(players_struct, player)
-    completed_by.write(player, true)
-
-    let (profiles) = profiles.read()
-    let (reputation_reward) = reputation_reward.read()
-    IggProfiles.increase_reputation(contract_address=profiles, player, reputation_reward)
-
-    reward_sent.emit(player, reward)
-end
-
-@external
-func increase_reward_amount(amount : Uint256, reward : Reward):
-    let start = Uint256(0,0)
-    let (struct_rewards) = get_additional_rewards()
-    let (stop) = struct_rewards.len_additional_rewards    
-    let (exists) = _increase_reward_token{stop=stop, amount=amount, reward=reward}(start)
-    with_attr error_message("Given reward (token address) doesn't exist for this quest"):
-        assert exists = TRUE
-    end
-    return ()
-end
-
-@external
-func update_reputation_reward(new_value : felt):
-    reputation_reward.write(new_value)
-    reputation_reward_updated.emit(new_value)
-    return ()
-end
-
-@external
-func activate_quest():
-    is_active.write(TRUE)
-    quest_activated.emit()
-    return ()
-end
-
-@external
-func deactivate_quest(withdrawal_address : felt):
-    is_active.write(FALSE)
-    # transfer all tokens
-    let start = Uint256(0,0)
-    let (struct_rewards) = get_additional_rewards()
-    let (stop) = struct_rewards.len_additional_rewards
-    _transfer_tokens{stop=stop, withdraw_address=withdraw_address}(start)
-    quest_deactivated.emit()
-    return ()
-end
 
 
-
-# private
 func withdraw_reward(reward_id : felt, withdrawal_address : felt);
     let (additional_reward_struct) = additional_rewards.read()
     let rewards_arr = additional_reward_struct.additional_rewards_arr
@@ -340,6 +363,9 @@ func withdraw_reward(reward_id : felt, withdrawal_address : felt);
             with_attr error_message("transfer ERC1155 failed"):
                 assert_not_zero(success)
             end
+        end
+    end
+
     return ()
 end
 
@@ -347,6 +373,18 @@ end
 
 func _reward_hash(reward : Reward) -> (bytes : felt):
     #todo
+end
+
+#todo
+func _verifyUniquenessOfRewards{
+    stop : felt,
+    reward : Reward,
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}():
+
+    return ()
 end
 
 func _send_loop_reward{
