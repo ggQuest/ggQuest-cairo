@@ -65,11 +65,11 @@ func players() -> (res : PlayersStruct):
 end
 
 @storage_var
-func completed_by(address:felt)->(res : felt):
+func completed_by(address : felt)->(res : felt):
 end
 
 @storage_var
-func operators(address:felt) -> (res : felt):
+func operators(address : felt) -> (res : felt):
 end
 
 @storage_var
@@ -89,11 +89,11 @@ func reward_added(reward : Reward):
 end
 
 @event 
-func reward_sent(player : felt, reward: Reward):
+func reward_sent(player : felt, reward : Reward):
 end
 
 @event
-func reputation_reward_updated(res:felt):
+func reputation_reward_updated(res : felt):
 end
 
 @event
@@ -122,7 +122,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let players_struct = PlayersStruct(len_players=Uint256(0,0), players_arr=players_arr)
     players.write(players_struct)
 
-    # init players array & struct
+    # init additionalRewards array & struct
     let (local additional_rewards_arr : Reward*) = alloc()
     let additional_rewards_struct = AdditionalRewardsStruct(len_additional_rewards=Uint256(0,0), additional_rewards_arr=additional_rewards_arr)
     additional_rewards.write(additional_rewards_struct)
@@ -145,13 +145,23 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 end
 
 @view
+func get_players_array{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (players : felt*, len_players : Uint256):
+    let (players_struct) = players.read()
+    return (
+        players_struct.players_arr,
+        players_struct.len_players
+    )
+end
+
+@view
 func get_quest_URI()-> (res : felt):
     let (metadata_URL) = metadata_URL.read()
     return (res=metadata_URL)
 end
 
 @view
-func get_rewards()->(additional_rewards: Reward*, len_rewards : felt):
+func get_rewards()->(additional_rewards : Reward*, len_rewards : Uint256):
     let (additional_rewards_struct) = additional_rewards.read()
     return (
         additional_rewards_struct.additional_rewards_arr,
@@ -160,14 +170,37 @@ func get_rewards()->(additional_rewards: Reward*, len_rewards : felt):
 end
 
 @view
-func is_operator(operator:felt) -> (res:felt):
+func is_operator(operator : felt) -> (res : felt):
     let (res) = operators.read(operator)
     return (res)
 end
 
+@view
+func get_active() -> (res : felt):
+    let (res) = is_active.read()
+    return (res)
+end
+
+@view
+func is_completed_by(address : felt) -> (res : felt):
+    let (completed_by) = completed_by.read(address)
+    return (res=completed_by)
+end
+
+@view
+func get_ggProfile_address()-> (res : felt):
+    let (contract) = profiles.read()
+    return (res=contract)
+end
+
+@view
+func get_reputation_reward()-> (res : felt):
+    let (reputation_reward) = reputation_reward.read()
+    return (res=reputation_reward)
+end
 
 @external
-func add_operator(operator:felt):
+func add_operator(operator : felt):
     operators.write(operator, true)
     operator_added.emit(operator)
 
@@ -175,7 +208,7 @@ func add_operator(operator:felt):
 end
 
 @external
-func remove_operator(operator:felt):
+func remove_operator(operator : felt):
     operators.write(operator, false)
     operator_removed(operator)
 
