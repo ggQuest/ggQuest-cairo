@@ -133,9 +133,10 @@ func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let (local rewards_array : Reward*) = alloc()
     let start = Uint256(0,0)
     let stop = rewards_len
+    local index_start = 0
     # to add a check if its zero
 
-    _get_additional_rewards{rewards_array=rewards_array, stop=stop}(start)
+    _get_additional_rewards{rewards_array=rewards_array, index_start=index_start, stop=stop}(start)
     return (rewards_len=rewards_len, rewards=rewards_array)
 end
 
@@ -483,9 +484,21 @@ func _get_additional_rewards{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
     rewards_array : Reward*,
+    index_start : felt,
     stop : felt,
 }(start : Uint256):
+    let (check_le) = uint256_le(stop, start)
+    assert_not_zero(check_le)
 
+    let (reward : Reward) = additional_rewards.read(start)
+    assert [rewards_array + index_start * Uint256.SIZE] = reward
+    tempvar index_start = index_start + 1
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+
+    let (next_start, _) = uint256_add(start, Uint256(1,0))
+    _get_additional_rewards(next_start)
 end
 
 func _get_players{
