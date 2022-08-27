@@ -32,6 +32,17 @@ struct Reward:
     member id: felt
 end
 
+struct PlayersStruct:
+    member len_players : felt
+    member players_arr : felt*
+end
+
+struct AdditionalRewardsStruct: 
+    member len_additional_rewards : felt
+    member additional_rewards_arr : Reward*
+end
+
+
 @storage_var
 func metadata_URL() -> (res: felt):
 end
@@ -48,20 +59,21 @@ end
 func profiles()->(res: ggProfile):
 end
 
+
 @storage_var
-func players() -> (res:felt*):
+func players() -> (res : felt*):
 end
 
 @storage_var
-func completed_by(address:felt)->(res: felt):
+func completed_by(address:felt)->(res : felt):
 end
 
 @storage_var
-func operators(address:felt) -> (res:felt):
+func operators(address:felt) -> (res : felt):
 end
 
 @storage_var
-func additional_rewards(index : felt)-> (res : Reward):
+func additional_rewards()-> (res : AdditionalRewardsStruct):
 end
 
 @event
@@ -106,6 +118,19 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     operators.write(caller, true)
 end
 
+@view
+func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (rewards : AdditionalRewardsStruct):
+    let (rewards) = additional_rewards.read()
+    return (rewards)
+end
+
+@view
+func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (players : PlayersStruct):
+    let (players) = players.read()
+    return (players)
+end
 
 
 @external
@@ -118,7 +143,6 @@ end
 func remove_operator(operator:felt):
     operators.write(operator, false)
     operator_removed(operator)
-
 end
 
 @view
@@ -196,11 +220,17 @@ func send_reward(player : felt):
     with_attr error_message("Quest already completed by this player"):
         assert completed_by = true
     end
-    let (had_at_least_one_reward) = _send_loop_reward{player:player}()
+    let start = Uint256(0,0)
+    let (struct_rewards) = get_additional_rewards()
+    let (stop) = struct_rewards.len_additional_rewards
+    let (had_at_least_one_reward) = _send_loop_reward{player=player, stop=stop}(start)
     with_attr error_message("All rewards have already been distributed"):
         assert had_at_least_one_reward = TRUE
     end
-
+    
+    let (players_struct) = get_players()
+    # push player in players array
+    _push_to_arr(players_struct, player)
     completed_by.write(player, true)
     reward_sent.emit(player, reward)
 end
@@ -209,10 +239,31 @@ end
 
 func _send_loop_reward{
     player : felt,
+    stop : felt,
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-}() -> (had_at_least_one_reward : felt):
+}(start : felt) -> (had_at_least_one_reward : felt):
     alloc_locals
 
+
+end
+
+func _push_to_players{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(struct : PlayersStruct, player : felt):
+
+    return ()
+end
+
+func _push_to_rewards{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+}(struct : AdditionalRewardsStruct, reward : Reward):
+    
+
+    return ()
 end
