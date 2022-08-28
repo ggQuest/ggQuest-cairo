@@ -163,15 +163,19 @@ end
 @view
 func get_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt
-) -> (reputation : felt):
-    
+) -> (gained_reputation : felt, lost_reputation : felt):
+    let (profile_data) = profiles.read(user_address)
+    let (gained_reputation) = profile_data.gained_reputation
+    let (lost_reputation) = profile_data.lost_reputation
+    return (gained_reputation=gained_reputation, lost_reputation=lost_reputation)
 end
 
 @view
 func get_profile_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt
 ) -> (profile_data : ProfileData):
-    
+    let (profile_data) = profiles.read(user_address)
+    return (profile_data=profile_data)
 end
 
 @view
