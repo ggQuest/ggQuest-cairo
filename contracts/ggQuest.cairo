@@ -233,11 +233,11 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     let start = Uint256(0,0)
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
+
+    # loop to check if rewards are unique
     _verifyUniquenessOfRewards{stop=stop, reward=reward}(start)
 
-    verifyTokenOwnershipFor(reward)
-    # todo
-    # loop to check if rewards are unique
+    _verifyTokenOwnershipFor(reward)
 
     additional_rewards.write(rewards_len, reward)
     additional_rewards_len.write(rewards_len + 1)
@@ -330,7 +330,6 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
     _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
-    #_transfer_tokens{stop=stop, withdraw_address=withdrawal_address}(start)
     quest_deactivated.emit()
     return ()
 end
@@ -338,7 +337,7 @@ end
 
 # private functions
 
-func verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func _verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     reward: Reward
 ):
     alloc_locals
@@ -462,14 +461,25 @@ end
 
 #todo
 func _verifyUniquenessOfRewards{
-    stop : felt,
-    reward : Reward,
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
+    stop : felt,
+    reward : Reward,
 }():
+    let (is_end_of_loop) = check_le(stop, start)
+    assert_not_zero(is_end_of_loop)
+    
+    let (additional_reward) = additional_rewards.read(start)
+    let (rhAR) = _reward_hash(additional_reward)
+    let (rhR) = _reward_hash(reward)
 
+    with_attr error_message("Token contract already used in another reward of the quest"):
+        assert rhAR != rhR #todo
+    end
 
+    let (next_start, _) = uint256_add(start, Uint256(1,0))
+    _verifyUniquenessOfRewards(next_start)
     return ()
 end
 
@@ -506,13 +516,6 @@ func _increase_reward_token{
     end
     let (next_start, _) = uint256_add(start, Uint256(1,0))
     _increase_reward_token(next_start)
-end
-
-func _verifyTokenOwnershipFor{ syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,}(
-    reward : Reward
-):
-
-    return ()
 end
 
 func _transfer_tokens{
