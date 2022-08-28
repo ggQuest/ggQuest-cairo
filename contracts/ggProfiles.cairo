@@ -152,6 +152,11 @@ end
 #  VIEW 
 ############
 
+@view
+func get_is_operator(operator : felt) -> (res : felt):
+    let (is_op) = operators.read(operator)
+    return (res=is_op)
+end
 
 ############
 #  EXTERNAL 
@@ -171,4 +176,17 @@ func add_operator{}(
     return ()
 end
 
+@external
+func remove_operator{}(
+    operator : felt
+):  
+    let (caller) = get_caller_address
+    with_attr error_message("Only operators can manage operators"):
+    let (is_operator) = operators.read(caller)
+        assert is_operator = 1
+    end
+    operators.write(operator, 0)
+    operator_removed(operator)
+    return ()
+end
 
