@@ -182,14 +182,19 @@ end
 func get_is_available{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     pseudo : felt
 ) -> (res : felt):
-    
+    let (is_taken) = taken_pseudonymes.read(pseudo)
+    if is_taken == 1:
+        return (res=0)
+    end
+    return (res=1)
 end
 
 @view
 func has_profile_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt
 ) -> (res : felt):
-    
+    let (profile_data) = profiles.read(user_address)
+    return (res=profile_data.is_registered)
 end
 
 #todo 
