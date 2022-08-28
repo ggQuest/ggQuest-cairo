@@ -262,8 +262,17 @@ end
 @external
 func burn{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt
-):
-    return ()
+):  
+    let (caller) = get_caller_address()
+    let (is_op) = operators.read(caller)
+    with_attr error_message("Only operators have rights to delete users' data"):
+        assert is_op = 1
+    end
+
+    let (null_object) = ProfileData(0,0,0,0,0,0)
+    profiles.write(user_address, null_object)
+    burn.emit(user_address)
+    return ()   
 end
 
 @external
