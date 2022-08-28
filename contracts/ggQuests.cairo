@@ -359,7 +359,7 @@ func _get_games{
     assert_not_zero(is_end_of_loop)
 
     let (game : felt) = games.read(start)
-    assert [games_array + index_start * Uint256.SIZE] = gamequest
+    assert [games_array + index_start * Uint256.SIZE] = game
     tempvar index_start = index_start + 1
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr

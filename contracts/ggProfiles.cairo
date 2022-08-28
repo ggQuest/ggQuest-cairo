@@ -201,6 +201,22 @@ func get_third_parties{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_c
     
 end
 
+@view
+func get_registered_addresses{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (registered_addresses_len : felt, registered_addresses : felt* ):
+
+    alloc_locals
+    let (registered_addresses_len) = registered_addresses_len.read()
+    let (local registered_addresses_array : felt*) = alloc()
+    let start = Uint256(0,0)
+    let stop = registered_addresses_len
+    local index_start = 0
+    # to add a check if its zero
+
+    _get_registered_addresses{registered_addresses=registered_addresses_array, index_start=index_start, stop=stop}(start)
+    return (registered_addresses_len=registered_addresses_len, registered_addresses=registered_addresses_array)
+end
+
 ############
 #  EXTERNAL 
 ############
@@ -407,4 +423,27 @@ func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     taken_psuedonymes.write(new_pseudo, 1)
     profiles.write(caller, updated_data)
     return ()
+end
+
+func _get_registered_addresses{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    registered_addresses_array : felt*,
+    index_start : felt,
+    stop : felt,
+}(start : Uint256):
+    let (is_end_of_loop) = uint256_le(stop,start)
+    assert_not_zero(is_end_of_loop)
+
+    let (registered_address : felt) = registered_addresses.read(start)
+    assert [registered_addresses + index_start * Uint256.SIZE] = registered_address
+    tempvar index_start = index_start + 1
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+
+    let (next_start, _) = uint256_add(start, Uint256(1,0))
+    _get_registered_addresses(next_start)
+
 end
