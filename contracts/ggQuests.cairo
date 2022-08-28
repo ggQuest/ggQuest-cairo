@@ -4,6 +4,27 @@ from starware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
 
+
+############
+# EVENTS
+############
+
+@event
+func operator_added(operator : felt):
+end
+
+@event
+func remove_operator(operator : felt):
+end
+
+@event 
+func quest_created(quest_id: felt, game_name: felt):
+end
+
+@event
+func game_added(game_name: felt, game_id: felt):
+end
+
 ############
 # STORAGE
 ############
@@ -58,6 +79,7 @@ end
 func games_metadata_base_URI() -> (res : felt):
 end
 
+#todo
 @storage_var 
 func game_id_to_quest_ids(game_id : felt) -> (quest_ids : felt*, len : felt):
 end
@@ -113,35 +135,43 @@ func get_quests_metadata_base_URI{syscall_ptr : felt*, pedersen_ptr : HashBuilti
     return (res)
 end
 
+@view
+func get_games_metadata_base_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (res : felt):
+    let (res) = games_metadata_base_URI.read()
+    return (res)
+end
+
+@view
+func get_quest_id_to_game_id{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    quest_id : felt
+) -> (game_id : felt):
+    let (game_id) = quest_id_to_game_id.read(quest_id)
+    return (game_id)
+end
+
+@view
+func get_operators{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    address : felt
+) -> (is_operator : felt):
+    let (is_operator) = operators.read(address)
+    return (is_operator)
+end
+
+
 ############
 # CONSTRUCTOR
 ############
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr} (
-    _ggProfiles : felt, _questsMetadataBaseURI : felt, _gamesMetadataBaseURI : felt
+    gg_profiles_contract : felt, questsMetadataBaseURI : felt, gamesMetadataBaseURI : felt
 ):
     let (caller_address) = get_caller_address()
-    profiles.write(_ggProfiles)
-    gamesMetadataBaseURI.write(_gamesMetadataBaseURI)
-    questsMetadatBaseURI.write(_questsMetadataBaseURI)
+    profiles.write(gg_profiles_contract)
+    gamesMetadataBaseURI.write(gamesMetadataBaseURI)
+    questsMetadatBaseURI.write(questsMetadataBaseURI)
     operators.write(caller_address, true)
     return ()
-end
-
-@event
-func operator_added(operator : felt):
-end
-
-@event
-func remove_operator(operator : felt):
-end
-
-@event 
-func quest_created(quest_id: felt, game_name: felt):
-end
-
-@event
-func game_added(game_name: felt, game_id: felt):
 end
 
 
