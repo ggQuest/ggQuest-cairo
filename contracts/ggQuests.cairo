@@ -3,6 +3,8 @@
 from starware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
+from contracts.interfaces.IggProfiles import IggProfiles
+
 
 
 ############
@@ -175,7 +177,10 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 end
 
 
-#   Add operator      @param _operator : address of the new operator
+############
+# EXTERNAL
+############
+#   Add operator @param _operator : address of the new operator
 @external
 func add_operator(operator : felt):
     operators.write(operator, true)
@@ -188,26 +193,29 @@ func remove_operator(operator: felt):
     operators.write(operator, false)
     operator_removed.emit(operator)
     return ()
-
 end
 
 @external
 func create_quest(reputation_reward :felt, game_id : felt) -> (res: felt):
     alloc_locals
-    # uint questId = quests.length;
-    # ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, profiles);
-    # quests.push(newQuest);
+    
+    let (quests_len) = quests_len.read()
+    # todo : ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, profiles);
+    let (new_quest) = 0
+    quests.write(quests_len, new_quest)
+    quests_len.write(quests_len + 1)
 
     quest_id_to_game_id.write(quest_id, game_id)
     
     # todo : gameIdToQuestIds[_gameId].push(questId);
+
     let (local quest_ids : felt*) = game_id_to_quest_ids.read(game_id)
 
     
     # update after pushing quest_id to quest_ids
-    game_id_to_quest_ids.write(game_id, quest_ids)
-
-    # todo : profiles.addOperator(address(newQuest));
+    # game_id_to_quest_ids.write(game_id, quest_ids)
+    let (profiles_contract) = profiles.read()
+    IggProfiles.add_operator(contract_address=profiles_contract,new_quest)
 
     let (game_name) = games.read(game_id)
     quest_created.emit(quest_id, game_name)
@@ -215,6 +223,7 @@ func create_quest(reputation_reward :felt, game_id : felt) -> (res: felt):
     return (res=quest_id)
 
 end
+
 
 @view
 func get_quest_URI(quest_id : felt) -> (res: felt):
