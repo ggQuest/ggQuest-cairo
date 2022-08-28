@@ -279,6 +279,15 @@ end
 func update{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_data : UpdatableByUserData
 ):
+    let (caller) = get_caller_address()
+    let (profile_data) = profiles.read(caller)
+    let (is_registered) = profile_data.is_registered
+    with_attr error_message("Profile not registered, please mint first"):
+        assert is_registered = 1
+    end
+    _set_user_data(caller, user_data)
+
+    update.emit(caller, user_data.pseudo)
     return ()
 end
 
@@ -286,6 +295,31 @@ end
 func increase_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, amount : felt
 ):
+    let (caller) = get_caller_address()
+    # check caller is operator 
+    let (is_op) = operators.read(caller)
+    with_attr error_message("Only operators can manage reputation"):
+        assert is_op = 1
+    end
+
+    # check profile is registered
+    let (profile_data) = profiles.read(user_address)
+    let (is_registered) = profile_data.is_registered
+    with_attr error_message("Profile not registered"):
+        assert is_registered = 1
+    end
+
+    let (new_user_data : ProfileData) = ProfileData(
+        profile_data.pseudo,
+        profile_data.profile_picture_URL, 
+        profile_data.cover_picture_URL, 
+        1 ,
+        profile_data.gained_reputation + amount, 
+        profile_data.lost_reputation
+    )
+
+    profiles.write(user_address, new_user_data)
+    reputation_increased(user_address, amount)
     return ()
 end
 
