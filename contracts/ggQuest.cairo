@@ -295,7 +295,8 @@ func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let start = Uint256(0,0)
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    let (exists) = _increase_reward_token{stop=stop, amount=amount, reward=reward}(start)
+    let exists = 0
+    _increase_reward_token{stop=stop, amount=amount, reward=reward, exists=exists}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
         assert exists = 1
     end
@@ -450,6 +451,7 @@ func _verifyUniquenessOfRewards{
     range_check_ptr,
 }():
 
+
     return ()
 end
 
@@ -459,9 +461,40 @@ func _increase_reward_token{
     range_check_ptr,
     stop : felt, 
     amount : felt, 
-    reward : Reward
+    reward : Reward,
+    exists : felt
 }(start : Uint256):
+    alloc_locals
+    let (is_end_of_loop) = check_le(stop, start)
+    assert_not_zero(is_end_of_loop)
+    let (additional_reward) = additional_rewards.read(start)
+    let (rhAR) = _reward_hash(additional_reward)
+    let (rhR) = _reward_hash(reward)
+    if rhAR == rhR :
+        tempvar exists = 1
+        let (local reward_test : Reward) = additional_rewards.read(start)
+        let (players_len) = players_len.read()
+        let (local amount_test) = reward_test.amount + amount - players_len
+        
+        _verifyTokenOwnershipFor(reward_test)
+        let (new_reward : Reward) = Reward(
+            additional_rewards.reward_type, 
+            additional_rewards.reward_contract, 
+            additional_rewards.token_amount,
+            additional_rewards.amount + amount,
+            additional_rewards.id
+        )
+        additional_rewards.write(start, new_reward)       
+    end
+    let (next_start, _) = uint256_add(start, Uint256(1,0))
+    _increase_reward_token(next_start)
+end
 
+func _verifyTokenOwnershipFor{ syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr,}(
+    reward : Reward
+):
+
+    return ()
 end
 
 func _transfer_tokens{
@@ -482,6 +515,8 @@ func _send_loop_reward{
     had_at_least_one_reward : felt
 }(start : felt):
     alloc_locals
+    let (is_end_of_loop) = check_le(stop, start)
+    assert_not_zero(check_le)
     let (reward : Reward) = additional_rewards.read(start)
     let (players_len : felt) = players_len.read()
     let (enough_rewards) = uint256_le(players_len, reward.amount)
