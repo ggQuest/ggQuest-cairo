@@ -4,6 +4,7 @@ from starware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
 from contracts.interfaces.IggProfiles import IggProfiles
+from contracts.interfaces.IggQuest import IggQuest
 
 
 
@@ -42,6 +43,11 @@ end
 # Players' profiles (ggProfiles address contract)
 @storage_var
 func profiles() -> (res : felt):
+end
+
+# ggQuest' contract address
+@storage_var
+func gg_quest_contract() -> (res : felt):
 end
 
 
@@ -93,6 +99,13 @@ end
 ############
 #  VIEW 
 ############
+
+@view
+func get_ggQuest_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+)-> (res : felt):
+    let (contract) = gg_quest_contract.read()
+    return (res=contract)
+end
 @view
 func get_ggProfile_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
@@ -160,6 +173,18 @@ func get_operators{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
     return (is_operator)
 end
 
+@view
+func get_quest_URI(quest_id : felt) -> (res : felt):
+    let (quests_len) = quests_len.read()
+    with_attr error_message("QuestID does not exist"):
+        assert quests_len > quest_id
+    end
+    let (quest) = quests_read(quest_id)
+    let (gg_quest_address) = gg_quest_contract.read()
+    let (res) = IggQuest.get_quest_URI(contract_address=gg_quest_address)
+
+    return (res=res)
+end
 
 ############
 # CONSTRUCTOR
@@ -225,32 +250,29 @@ func create_quest(reputation_reward :felt, game_id : felt) -> (res: felt):
 end
 
 
-@view
-func get_quest_URI(quest_id : felt) -> (res: felt):
-    let (item) = quests.read(quest_id)
-    let (res) = ggQuest(item).get_quest_URI()
-
-
-    return (res=res)
-
-end
-
-@view 
-func get_quests()->(res: felt*):
-#todo
-end
-
 @external
-func add_quest_operator(quest_id : felt, address : felt):
-    #todo
+func add_quest_operator(quest_id : felt, operator : felt):
+    
+    let (quests_len) = quests_len.read()
+    with_attr error_message("QuestID does not exist"):
+        assert quests_len > quest_id
+    end
+    let (gg_quest_address) = quests_read.read(quest_id)
 
+    IggQuest.add_operator(contract_address=gg_quest_address, operator)
     return ()
 
 end
 
 @external
 func remove_quest_operator(quest_id : felt, address : felt):
-    #todo
+    let (quests_len) = quests_len.read()
+    with_attr error_message("QuestID does not exist"):
+        assert quests_len > quest_id
+    end
+    let (gg_quest_address) = quests_read.read(quest_id)
+
+    IggQuest.remove_operator(contract_address=gg_quest_address, operator)
     return ()
 
 end
@@ -262,10 +284,7 @@ func add_game(game_name:felt)->(res:felt):
     return size
 end
 
-@view
-func get_games()->(res: felt*):
-# todo
-end
+
 
 @view
 func get_url_metadata(game_id: felt)->(res: felt):
