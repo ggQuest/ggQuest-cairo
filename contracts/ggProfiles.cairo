@@ -355,12 +355,14 @@ func decrease_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
     return ()
 end
 
+#todo
 @external 
 func add_third_party{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ):
 
 end
 
+#todo
 @external
 func link_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     profile_address : felt, third_party_id : felt, third_party_user_id : felt 
@@ -369,6 +371,7 @@ func link_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin
     return ()
 end
 
+#todo
 @external
 func unlink_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     profile_address : felt, third_party_id : felt
@@ -384,7 +387,24 @@ end
 
 func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, user_data : UpdatableByUserData
-):
+):  
+    let (current_data) = profiles.read(user_address)
+    let current_pseudo = current_data.pseudo
+    let (new_pseudo) = user_data.pseudo
 
+    # todo : finish the body 
+
+    let (caller) = get_caller_address()
+    let (updated_data : ProfileData) = ProfileData(
+        new_pseudo,
+        user_data.profile_picture_URL, 
+        user_data.cover_picture_URL, 
+        current_data.is_registered ,
+        current_data.gained_reputation, 
+        current_data.lost_reputation - amounts
+    )
+
+    taken_psuedonymes.write(new_pseudo, 1)
+    profiles.write(caller, updated_data)
     return ()
 end
