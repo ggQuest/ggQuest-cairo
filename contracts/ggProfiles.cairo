@@ -1,5 +1,7 @@
 %lang starknet
 
+from starware.cairo.common.cairo_builtins import HashBuiltin
+
 
 from starkware.starknet.common.syscalls import (
     get_caller_address,
@@ -82,3 +84,67 @@ end
 @storage_var
 func operators(address : felt) -> (is_operator : felt):
 end
+
+############
+#  EVENTS 
+############
+
+@event
+func mint(user_address : felt, pseudo : felt):
+end
+
+@event
+func burn(user_address : felt):
+end
+
+@event
+func update(user_address : felt, pseudo : felt):
+end
+
+@event
+func increase_reputation(user_address : felt, amount : felt):
+end
+
+@event
+func decrease_reputation(user_address : felt, amount : felt):
+end
+
+@event
+func add_operator(operator_address : felt):
+end
+
+@event
+func remove_operator(operator_address : felt):
+end
+
+@event
+func add_supported_third_party(name : felt):
+end
+
+@event
+func link_third_part_to_profile(user_address : felt, third_party_id : felt, third_party_user_id : felt):
+end
+
+@event
+func unlink_third_part_to_profile(user_address : felt, third_party_id : felt):
+end
+
+############
+#  CONSTRUCTOR 
+############
+@constructor
+func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
+
+    return ()
+end
+
+
+
+
+
+############
+#  VIEW 
+############
+
+
+
