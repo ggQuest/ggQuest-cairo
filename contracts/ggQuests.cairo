@@ -27,6 +27,7 @@ func completed_quests(completed_quests : felt) -> (number : felt):
 end
 
 # questID => number of profiles who completed the quest
+# todo
 @storage_var
 func completed_quests_by_profile(profile : felt) -> (quest_ids : felt*, len : felt):
 end
@@ -37,9 +38,8 @@ func games(game_id: felt) -> (game_name : felt):
 end
 
 @storage_var
-func thirdParties(index:felt) -> (res : felt):
+func games_len() -> (len : felt):
 end
-
 
 @storage_var
 func quests(index : felt) -> (contract : felt):
@@ -91,7 +91,27 @@ func get_quests{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     return (quests_len=quests_len, quests=quests_array)
 end
 
+@view
+func get_games{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (games_len : felt, games : felt*):
+    alloc_locals
+    let (games_len) = games_len.read()
+    let (local games_array : felt*) = alloc()
+    let start = Uint256(0,0)
+    let stop = games_len
+    local index_start = 0
+    # to add a check if its zero
 
+    _get_games{games_array=games_array, index_start=index_start, stop=stop}(start)
+    return (games_len=games_len, games=games_array)
+end
+
+@view
+func get_quests_metadata_base_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (res : felt):
+    let (res) = quests_metadata_base_URI.read()
+    return (res)
+end
 
 ############
 # CONSTRUCTOR
@@ -240,4 +260,26 @@ func _get_quests{
 
     let (next_start, _) = uint256_add(start, Uint256(1,0))
     _get_quests(next_start)
+end
+
+func _get_games{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    games_array : Reward*,
+    index_start : felt,
+    stop : felt,
+}(start : Uint256):
+    let (is_end_of_loop) = uint256_le(stop,start)
+    assert_not_zero(is_end_of_loop)
+
+    let (game : felt) = games.read(start)
+    assert [games_array + index_start * Uint256.SIZE] = gamequest
+    tempvar index_start = index_start + 1
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+
+    let (next_start, _) = uint256_add(start, Uint256(1,0))
+    _get_games(next_start)
 end
