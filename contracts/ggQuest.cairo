@@ -329,7 +329,8 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     let start = Uint256(0,0)
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    _transfer_tokens{stop=stop, withdraw_address=withdrawal_address}(start)
+    _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
+    #_transfer_tokens{stop=stop, withdraw_address=withdrawal_address}(start)
     quest_deactivated.emit()
     return ()
 end
@@ -440,6 +441,23 @@ func _reward_hash{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     reward : Reward
 ) -> (bytes : felt):
     #todo
+end
+
+func _deactivate_loop{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    stop : felt, 
+    withdrawal_address : felt
+}(start : Uint256):
+    let (is_end_of_loop) = check_le(stop, start)
+    assert_not_zero(is_end_of_loop)
+
+    _withdraw_reward(start, withdrawal_address)
+
+    let (next_start, _) = uint256_add(start, Uint256(1,0))
+    _deactivate_loop(next_start)
+    return ()
 end
 
 #todo
