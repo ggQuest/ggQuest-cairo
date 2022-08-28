@@ -133,8 +133,13 @@ end
 #  CONSTRUCTOR 
 ############
 @constructor
-func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}():
-
+func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    _name : felt, _ticker : felt
+):
+    name.write(_name)
+    ticker.write(_ticker)
+    let (caller) = get_caller_address
+    operators.write(caller, 1)
     return ()
 end
 
