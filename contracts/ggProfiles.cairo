@@ -145,9 +145,6 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 end
 
 
-
-
-
 ############
 #  VIEW 
 ############
@@ -240,6 +237,25 @@ end
 func mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_data : UpdatableByUserData
 ):
+    alloc_locals
+    let (caller) = get_caller_address()
+    let (profile_data) = profiles.read(caller)
+    let (is_registered) = profile_data.is_registered
+    with_attr error_message("Profile already registered"):
+        assert is_registered = 0
+    end
+    _set_user_data(caller, user_data)
+    let (new_user_data : ProfileData) = ProfileData(
+        profile_data.pseudo,
+        profile_data.profile_picture_URL, 
+        profile_data.cover_picture_URL, 
+        1 ,
+        profile_data.gained_reputation, 
+        profile_data.lost_reputation
+    )
+
+    profiles.write(caller, new_user_data)
+    mint.emit(caller, user_data.pseudo)
     return ()
 end
 
