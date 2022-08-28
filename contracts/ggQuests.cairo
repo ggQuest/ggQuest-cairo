@@ -36,10 +36,6 @@ end
 func operators(address : felt) -> (is_operator : felt):
 end
 
-#ggProfiles private profiles;
-#ggQuest[] private quests;
-
-
 # Players' profiles (ggProfiles address contract)
 @storage_var
 func profiles() -> (res : felt):
@@ -306,7 +302,7 @@ func add_game{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
 )->(res : felt):
     let (games_len) = games_len.read()
     games.write(games_len, game_name)
-    game_added.emit(game_name, )
+    game_added.emit(game_name, game_len - 1)
     return (res=game_len - 1)
 end
 
