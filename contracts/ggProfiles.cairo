@@ -110,11 +110,11 @@ func decrease_reputation(user_address : felt, amount : felt):
 end
 
 @event
-func add_operator(operator_address : felt):
+func operator_added(operator_address : felt):
 end
 
 @event
-func remove_operator(operator_address : felt):
+func operator_removed(operator_address : felt):
 end
 
 @event
@@ -132,6 +132,7 @@ end
 ############
 #  CONSTRUCTOR 
 ############
+
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     _name : felt, _ticker : felt
@@ -151,5 +152,23 @@ end
 #  VIEW 
 ############
 
+
+############
+#  EXTERNAL 
+############
+
+@external
+func add_operator{}(
+    operator : felt
+):  
+    let (caller) = get_caller_address
+    with_attr error_message("Only operators can manage operators"):
+    let (is_operator) = operators.read(caller)
+        assert is_operator = 1
+    end
+    operators.write(operator, 1)
+    operator_added(operator)
+    return ()
+end
 
 
