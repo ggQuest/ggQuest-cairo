@@ -3,6 +3,7 @@
 from starware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
+
 ############
 # STORAGE
 ############
@@ -15,9 +16,9 @@ end
 #ggQuest[] private quests;
 
 
-# Players' profiles
+# Players' profiles (ggProfiles address contract)
 @storage_var
-func profiles() -> (gg_profiles : felt):
+func profiles() -> (res : felt):
 end
 
 
@@ -41,7 +42,11 @@ end
 
 
 @storage_var
-func quests() -> (gg_quest : felt*, len : felt):
+func quests(index : felt) -> (contract : felt):
+end
+
+@storage_var
+func quests_len() -> (len : felt):
 end
 
 @storage_var 
@@ -60,6 +65,32 @@ end
 @storage_var
 func quest_id_to_game_id(quest_id : felt) -> (game_id : felt):
 end
+
+############
+#  VIEW 
+############
+@view
+func get_ggProfile_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+)-> (res : felt):
+    let (contract) = profiles.read()
+    return (res=contract)
+end
+
+@view
+func get_quests{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (quests_len : felt, quests : felt*):
+    alloc_locals
+    let (quests_len) = quests_len.read()
+    let (local quests_array : felt*) = alloc()
+    let start = Uint256(0,0)
+    let stop = quests_len
+    local index_start = 0
+    # to add a check if its zero
+
+    _get_quests{quests_array=quests_array, index_start=index_start, stop=stop}(start)
+    return (quests_len=quests_len, quests=quests_array)
+end
+
 
 
 ############
@@ -183,4 +214,30 @@ func get_url_metadata(game_id: felt)->(res: felt):
     let (games_metadata) = games_metadata_base_URI.read()
     let (res) = games_metadata + game_id
     return (res)
+end
+
+############
+# INTERNAL
+############
+
+func _get_quests{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    quests_array : Reward*,
+    index_start : felt,
+    stop : felt,
+}(start : Uint256):
+    let (is_end_of_loop) = uint256_le(stop,start)
+    assert_not_zero(is_end_of_loop)
+
+    let (quest : felt) = quests.read(start)
+    assert [quests_array + index_start * Uint256.SIZE] = quest
+    tempvar index_start = index_start + 1
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+
+    let (next_start, _) = uint256_add(start, Uint256(1,0))
+    _get_quests(next_start)
 end
