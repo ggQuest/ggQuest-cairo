@@ -3,10 +3,24 @@
 from starware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
+from starkware.starknet.common.syscalls import (
+    get_caller_address,
+    get_contract_address
+)
+
 from contracts.interfaces.IggProfiles import IggProfiles
 from contracts.interfaces.IggQuest import IggQuest
 
 
+from starkware.cairo.common.uint256 import (
+    Uint256, 
+    uint256_add,
+    uint256_sub,
+    uint256_le,
+    uint256_lt,
+    uint256_check,
+    assert_not_zero
+)
 
 ############
 # EVENTS

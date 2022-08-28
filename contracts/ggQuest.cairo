@@ -23,6 +23,11 @@ from contracts.tokens.ERC721.IERC721 import IERC721
 
 from contracts.interfaces.IggProfiles import IggProfiles
 
+
+############
+#  STRUCTS 
+############
+
 # enum-like
 struct RewardType:
     member ERC20 : felt
@@ -38,7 +43,9 @@ struct Reward:
     member id: felt
 end
 
-
+############
+#  STORAGE 
+############
 
 @storage_var
 func players(index : felt) -> (player : felt):
@@ -80,6 +87,9 @@ end
 func operators(address : felt) -> (res : felt):
 end
 
+############
+#  EVENT 
+############
 
 @event
 func operator_added(operator : felt):
@@ -109,7 +119,9 @@ end
 func quest_deactivated(withdraw_address : felt):
 end
 
-
+############
+#  CONSTRUCTOR 
+############
 
 @constructor
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr} (
@@ -124,6 +136,10 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 
     return ()
 end
+
+############
+#  VIEW 
+############
 
 @view
 func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -199,6 +215,10 @@ func get_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
     let (reputation_reward) = reputation_reward.read()
     return (res=reputation_reward)
 end
+
+############
+#  EXTERNAL 
+############
 
 @external
 func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -335,6 +355,10 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
 end
 
 
+############
+#  PRIVATE 
+############
+
 # private functions
 
 func _verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -434,7 +458,9 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     return ()
 end
 
-# internals
+############
+#  INTERNAL 
+############
 
 func _reward_hash{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     reward : Reward
