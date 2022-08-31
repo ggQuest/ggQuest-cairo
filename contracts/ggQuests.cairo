@@ -11,6 +11,15 @@ from starkware.starknet.common.syscalls import (
 from contracts.interfaces.IggProfiles import IggProfiles
 from contracts.interfaces.IggQuest import IggQuest
 
+from starware.cairo.common.math import (
+    assert_not_zero,
+    assert_nn_le,
+    assert_in_range,
+    assert_not_equal,
+    assert_nn,
+    assert_le,
+    assert_lt
+)
 
 from starkware.cairo.common.uint256 import (
     Uint256, 
@@ -189,7 +198,7 @@ func get_quest_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check
 ) -> (res : felt):
     let (quests_len) = quests_len.read()
     with_attr error_message("QuestID does not exist"):
-        assert quests_len > quest_id
+        assert_lt(quest_id, quests_len)
     end
     let (quest) = quests_read(quest_id)
     let (gg_quest_address) = gg_quest_contract.read()
@@ -204,8 +213,7 @@ func get_url_metadata{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
 )->(res : felt):
 # todo
     let (games_metadata) = games_metadata_base_URI.read()
-    let (res) = games_metadata + game_id
-    return (res)
+    return (res=games_metadata + game_id)
 end
 
 ############
@@ -285,7 +293,7 @@ func add_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
     
     let (quests_len) = quests_len.read()
     with_attr error_message("QuestID does not exist"):
-        assert quests_len > quest_id
+        assert_lt(quest_id, quests_len)
     end
     let (gg_quest_address) = quests_read.read(quest_id)
 
@@ -300,7 +308,7 @@ func remove_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
 ):
     let (quests_len) = quests_len.read()
     with_attr error_message("QuestID does not exist"):
-        assert quests_len > quest_id
+        assert_lt(quest_id, quests_len)
     end
     let (gg_quest_address) = quests_read.read(quest_id)
 
@@ -344,6 +352,7 @@ func _get_quests{
     tempvar range_check_ptr = range_check_ptr
 
     let (next_start, _) = uint256_add(start, Uint256(1,0))
+    
     _get_quests(next_start)
 end
 
