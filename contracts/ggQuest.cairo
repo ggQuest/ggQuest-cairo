@@ -17,6 +17,16 @@ from starkware.cairo.common.uint256 import (
     assert_not_zero
 )
 
+from starkware.cairo.common.math import (
+    assert_not_zero,
+    assert_nn_le,
+    assert_in_range,
+    assert_not_equal,
+    assert_nn,
+    assert_le,
+    assert_lt
+)
+
 from contracts.tokens.ERC20.IERC20 import IERC20
 from contracts.tokens.ERC721.IERC721 import IERC721
 #from contracts.tokens.ERC1155.IERC1155 import IERC1155
@@ -151,7 +161,7 @@ func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let stop = rewards_len
     local index_start = 0
     # to add a check if its zero
-
+    
     _get_additional_rewards{rewards_array=rewards_array, index_start=index_start, stop=stop}(start)
     return (rewards_len=rewards_len, rewards=rewards_array)
 end
@@ -501,7 +511,7 @@ func _verifyUniquenessOfRewards{
     let (rhR) = _reward_hash(reward)
 
     with_attr error_message("Token contract already used in another reward of the quest"):
-        assert rhAR != rhR #todo
+        assert_not_equal(rhAR, rhR)
     end
 
     let (next_start, _) = uint256_add(start, Uint256(1,0))

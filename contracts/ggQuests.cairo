@@ -1,6 +1,6 @@
 %lang starknet
 
-from starware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 
 from starkware.starknet.common.syscalls import (
@@ -11,7 +11,7 @@ from starkware.starknet.common.syscalls import (
 from contracts.interfaces.IggProfiles import IggProfiles
 from contracts.interfaces.IggQuest import IggQuest
 
-from starware.cairo.common.math import (
+from starkware.cairo.common.math import (
     assert_not_zero,
     assert_nn_le,
     assert_in_range,
@@ -352,7 +352,7 @@ func _get_quests{
     tempvar range_check_ptr = range_check_ptr
 
     let (next_start, _) = uint256_add(start, Uint256(1,0))
-    
+
     _get_quests(next_start)
 end
 

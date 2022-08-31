@@ -1,6 +1,6 @@
 %lang starknet
 
-from starware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 
 
 from starkware.starknet.common.syscalls import (
