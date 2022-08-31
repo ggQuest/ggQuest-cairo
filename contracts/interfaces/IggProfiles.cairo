@@ -36,5 +36,4 @@ namespace IggProfiles:
     func unlink_third_party_to_profile(profile_address : felt, third_party_id : felt):
     end
 
-
 end

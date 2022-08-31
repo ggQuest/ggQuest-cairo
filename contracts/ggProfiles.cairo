@@ -1,6 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.alloc import alloc
 
 
 from starkware.starknet.common.syscalls import (
@@ -90,15 +91,15 @@ end
 ############
 
 @event
-func mint(user_address : felt, pseudo : felt):
+func minted(user_address : felt, pseudo : felt):
 end
 
 @event
-func burn(user_address : felt):
+func burned(user_address : felt):
 end
 
 @event
-func update(user_address : felt, pseudo : felt):
+func updated(user_address : felt, pseudo : felt):
 end
 
 @event
@@ -271,7 +272,7 @@ func mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     )
 
     profiles.write(caller, new_user_data)
-    mint.emit(caller, user_data.pseudo)
+    minted.emit(caller, user_data.pseudo)
     return ()
 end
 
@@ -287,7 +288,7 @@ func burn{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 
     let (null_object) = ProfileData(0,0,0,0,0,0)
     profiles.write(user_address, null_object)
-    burn.emit(user_address)
+    burned.emit(user_address)
     return ()   
 end
 
@@ -303,7 +304,7 @@ func update{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     end
     _set_user_data(caller, user_data)
 
-    update.emit(caller, user_data.pseudo)
+    updated.emit(caller, user_data.pseudo)
     return ()
 end
 
@@ -363,7 +364,7 @@ func decrease_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
         profile_data.cover_picture_URL, 
         1 ,
         profile_data.gained_reputation, 
-        profile_data.lost_reputation - amounts
+        profile_data.lost_reputation - amount
     )
 
     profiles.write(user_address, new_user_data)
@@ -417,7 +418,7 @@ func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
         user_data.cover_picture_URL, 
         current_data.is_registered ,
         current_data.gained_reputation, 
-        current_data.lost_reputation - amounts
+        current_data.lost_reputation - amount
     )
 
     taken_psuedonymes.write(new_pseudo, 1)
