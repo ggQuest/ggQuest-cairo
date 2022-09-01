@@ -58,43 +58,43 @@ end
 ############
 
 @storage_var
-func players(index : felt) -> (player : felt):
+func Players(index : felt) -> (player : felt):
 end 
 
 @storage_var
-func players_len() -> (len : felt):
+func Players_Len() -> (len : felt):
 end
 
 @storage_var
-func additional_rewards(index : felt)->(additional_reward : Reward):
+func Additional_Rewards(index : felt)->(additional_reward : Reward):
 end
 
 @storage_var
-func additional_rewards_len() -> (len : felt):
+func Additional_Rewards_Len() -> (len : felt):
 end
 
 @storage_var
-func metadata_URL() -> (res : felt):
+func Metadata_URL() -> (res : felt):
 end
 
 @storage_var
-func reputation_reward() -> (res : felt):
+func Reputation_Reward() -> (res : felt):
 end
 
 @storage_var
-func is_active() -> (res : felt):
+func Is_Active() -> (res : felt):
 end
 
 @storage_var
-func profiles()->(res : felt):
+func Profiles()->(res : felt):
 end
 
 @storage_var
-func completed_by(address : felt)->(res : felt):
+func Completed_By(address : felt)->(res : felt):
 end
 
 @storage_var
-func operators(address : felt) -> (res : felt):
+func Operators(address : felt) -> (res : felt):
 end
 
 ############
@@ -102,11 +102,11 @@ end
 ############
 
 @event
-func operator_added(operator : felt):
+func OperatorAdded(operator : felt):
 end
 
 @event
-func operator_removed(operator : felt):
+func OperatorRemoved(operator : felt):
 end
 
 @event
@@ -114,19 +114,19 @@ func reward_added(reward : Reward):
 end
 
 @event 
-func reward_sent(player : felt):
+func RewardSent(player : felt):
 end
 
 @event
-func reputation_reward_updated(res : felt):
+func ReputationRewardUpdated(res : felt):
 end
 
 @event
-func quest_activated():
+func QuestActivated():
 end
 
 @event
-func quest_deactivated(withdraw_address : felt):
+func QuestDeactivated(withdraw_address : felt):
 end
 
 ############
@@ -138,11 +138,11 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     gg_profiles_contract : felt, reputation_reward : felt, metadata_URL : felt
 ):  
     alloc_locals
-    metadata_URL.write(metadata_URL)
-    reputation_reward.write(reputation_reward)
-    profiles.write(gg_profiles_contract)
+    Metadata_URL.write(metadata_URL)
+    Reputation_Reward.write(reputation_reward)
+    Profiles.write(gg_profiles_contract)
     let (caller) = get_caller_address()
-    operators.write(caller, 1)
+    Operators.write(caller, 1)
 
     return ()
 end
@@ -155,7 +155,7 @@ end
 func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (rewards_len : felt , rewards : Reward*):
     alloc_locals
-    let (rewards_len) = additional_rewards_len.read()
+    let (rewards_len) = Additional_Rewards_Len.read()
     let (local rewards_array : Reward*) = alloc()
     let (local start) = 0
     let stop = rewards_len
@@ -169,7 +169,7 @@ end
 func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (players_len : felt, players : felt*):
     alloc_locals
-    let (players_len) = players_len.read()
+    let (players_len) = Players_Len.read()
     let (local players_array : felt*) = alloc()
     let (local start) = 0
     let stop = players_len
@@ -183,7 +183,7 @@ end
 @view
 func get_quest_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-    let (metadata_URL) = metadata_URL.read()
+    let (metadata_URL) = Metadata_URL.read()
     return (res=metadata_URL)
 end
 
@@ -191,14 +191,14 @@ end
 func is_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ) -> (res : felt):
-    let (res) = operators.read(operator)
+    let (res) = Operators.read(operator)
     return (res)
 end
 
 @view
 func get_active{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (res : felt):
-    let (res) = is_active.read()
+    let (res) = Is_Active.read()
     return (res)
 end
 
@@ -206,21 +206,21 @@ end
 func is_completed_by{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     address : felt
 ) -> (res : felt):
-    let (completed_by) = completed_by.read(address)
+    let (completed_by) = Completed_By.read(address)
     return (res=completed_by)
 end
 
 @view
 func get_ggProfile_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-    let (contract) = profiles.read()
+    let (contract) = Profiles.read()
     return (res=contract)
 end
 
 @view
 func get_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-    let (reputation_reward) = reputation_reward.read()
+    let (reputation_reward) = Reputation_Reward.read()
     return (res=reputation_reward)
 end
 
@@ -233,8 +233,8 @@ func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     operator : felt
 ):
     assert_only_operator()
-    operators.write(operator, 1)
-    operator_added.emit(operator)
+    Operators.write(operator, 1)
+    OperatorAdded.emit(operator)
 
     return ()
 end
@@ -244,8 +244,8 @@ func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     operator : felt
 ):
     assert_only_operator()
-    operators.write(operator, 0)
-    operator_removed(operator)
+    Operators.write(operator, 0)
+    OperatorRemoved(operator)
 
     return ()
 end
@@ -258,14 +258,14 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
 
     assert_only_operator()
 
-    let (active) = is_active.read()
+    let (active) = Is_Active.read()
     with_attr error_message("Rewards cannot be added after quest activation"):
         assert active = 0
     end
 
     # Verify if rewards are unique (not twice the same ERC721 for example)
     local start = 0
-    let (rewards_len) = additional_rewards_len.read()
+    let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
 
     # loop to check if rewards are unique
@@ -273,8 +273,8 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
 
     _verifyTokenOwnershipFor(reward)
 
-    additional_rewards.write(rewards_len, reward)
-    additional_rewards_len.write(rewards_len + 1)
+    Additional_Rewards.write(rewards_len, reward)
+    Additional_Rewards_Len.write(rewards_len + 1)
 
     reward_added.emit(reward)
 
@@ -288,12 +288,12 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     alloc_locals
     assert_only_operator()
 
-    let (completed_by) = completed_by.read(address=player)
+    let (completed_by) = Completed_By.read(address=player)
     with_attr error_message("Quest already completed by this player"):
         assert completed_by = 1
     end
     local start = 0
-    let (rewards_len) = additional_rewards_len.read()
+    let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
     local had_at_least_one_reward = 0
     _send_loop_reward{
@@ -305,20 +305,20 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
         assert had_at_least_one_reward = 1
     end
     
-    let (players_len) = players_len.read()
+    let (players_len) = Players_Len.read()
 
     # push player in players array
-    players.write(players_len, player)
-    players_len.write(players_len + 1)
-    completed_by.write(player, 1)
+    Players.write(players_len, player)
+    Players_Len.write(players_len + 1)
+    Completed_By.write(player, 1)
 
-    let (profiles) = profiles.read()
-    let (reputation_reward) = reputation_reward.read()
+    let (profiles) = Profiles.read()
+    let (reputation_reward) = Reputation_Reward.read()
     IggProfiles.increase_reputation(contract_address=profiles, player, reputation_reward)
 
     #todo 
     #let (local reward : Reward) = Reward(RewardType.ERC20, 0, Uint256(0,0), Uint256(0,0), 0)
-    reward_sent.emit(player)
+    RewardSent.emit(player)
 end
 
 @external
@@ -327,7 +327,7 @@ func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
 ):
     alloc_locals
     local start = 0
-    let (rewards_len) = additional_rewards_len.read()
+    let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
     local exists = 0
     _increase_reward_token{stop=stop, amount=amount, reward=reward, exists=exists}(start)
@@ -343,8 +343,8 @@ func update_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
 ):
     assert_only_operator()
 
-    reputation_reward.write(new_value)
-    reputation_reward_updated.emit(new_value)
+    Reputation_Reward.write(new_value)
+    R.emit(new_value)
     return ()
 end
 
@@ -353,8 +353,8 @@ func activate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
 ):
     assert_only_operator()
 
-    is_active.write(1)
-    quest_activated.emit()
+    Is_Active.write(1)
+    Q.emit()
     return ()
 end
 
@@ -365,13 +365,13 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     alloc_locals
     assert_only_operator()
 
-    is_active.write(0)
+    Is_Active.write(0)
     # transfer all tokens
     local start = 0
-    let (rewards_len) = additional_rewards_len.read()
+    let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
     _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
-    quest_deactivated.emit()
+    Q.emit()
     return ()
 end
 
@@ -387,7 +387,7 @@ func assert_only_operator{
     with_attr error_message("caller is the zero address"):
         assert_not_zero(caller)
     end
-    let (is_op) = operators.read(caller)
+    let (is_op) = Operators.read(caller)
     with_attr error_message("only operators can call this function"):
         assert is_op = 1
     end
@@ -445,7 +445,7 @@ end
 func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     reward_id : felt, withdrawal_address : felt
 ):
-    let (additional_reward_struct) = additional_rewards.read()
+    let (additional_reward_struct) = Additional_Rewards.read()
     let rewards_arr = additional_reward_struct.additional_rewards_arr
     let reward_type = rewards_arr[reward_id].reward_type
     let reward_contract = rewards_arr[reward_id].reward_contract
@@ -535,7 +535,7 @@ func _verifyUniquenessOfRewards{
         return ()
     end
     
-    let (additional_reward) = additional_rewards.read(start)
+    let (additional_reward) = Additional_Rewards.read(start)
     let (rhAR) = _reward_hash(additional_reward)
     let (rhR) = _reward_hash(reward)
 
@@ -562,13 +562,13 @@ func _increase_reward_token{
         return ()
     end
 
-    let (additional_reward) = additional_rewards.read(start)
+    let (additional_reward) = Additional_Rewards.read(start)
     let (rhAR) = _reward_hash(additional_reward)
     let (rhR) = _reward_hash(reward)
     if rhAR == rhR :
         tempvar exists = 1
-        let (local reward_test : Reward) = additional_rewards.read(start)
-        let (players_len) = players_len.read()
+        let (local reward_test : Reward) = Additional_Rewards.read(start)
+        let (players_len) = Players_Len.read()
         let (local amount_test) = reward_test.amount + amount - players_len
         
         _verifyTokenOwnershipFor(reward_test)
@@ -579,7 +579,7 @@ func _increase_reward_token{
         assert new_reward.amount = additional_rewards.amount + amount
         assert new_reward.id = additional_rewards.id
            
-        additional_rewards.write(start, new_reward)       
+        Additional_Rewards.write(start, new_reward)       
     end
     _increase_reward_token(start + 1)
 end
@@ -606,8 +606,8 @@ func _send_loop_reward{
         return ()
     end
 
-    let (reward : Reward) = additional_rewards.read(start)
-    let (players_len : felt) = players_len.read()
+    let (reward : Reward) = Additional_Rewards.read(start)
+    let (players_len : felt) = Players_Len.read()
     let (enough_rewards) = uint256_le(players_len, reward.amount)
     
     if enough_rewards == 1 :
@@ -641,7 +641,7 @@ func _get_additional_rewards{
         return ()
     end
 
-    let (reward : Reward) = additional_rewards.read(start)
+    let (reward : Reward) = Additional_Rewards.read(start)
     assert [rewards_array + start] = reward
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr
@@ -660,7 +660,7 @@ func _get_players{
     if start == stop:
         return ()
     end
-    let (player : felt) = players.read(start)
+    let (player : felt) = Players.read(start)
     assert [players_array + start] = player
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr
