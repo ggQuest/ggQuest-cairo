@@ -157,7 +157,7 @@ func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     alloc_locals
     let (rewards_len) = additional_rewards_len.read()
     let (local rewards_array : Reward*) = alloc()
-    let(local start) = 0
+    let (local start) = 0
     let stop = rewards_len
     # to add a check if its zero
     
@@ -171,7 +171,7 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     alloc_locals
     let (players_len) = players_len.read()
     let (local players_array : felt*) = alloc()
-    let(local start) = 0
+    let (local start) = 0
     let stop = players_len
     # to add a check if its zero
 
@@ -232,6 +232,7 @@ end
 func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):
+    assert_only_operator()
     operators.write(operator, 1)
     operator_added.emit(operator)
 
@@ -242,6 +243,7 @@ end
 func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):
+    assert_only_operator()
     operators.write(operator, 0)
     operator_removed(operator)
 
@@ -251,14 +253,17 @@ end
 @external
 func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     reward : Reward
-) -> (res : Uint256):
+) -> (res : felt):
+
+    assert_only_operator()
+
     let (active) = is_active.read()
     with_attr error_message("Rewards cannot be added after quest activation"):
         assert active = 0
     end
 
     # Verify if rewards are unique (not twice the same ERC721 for example)
-    let start = Uint256(0,0)
+    let (local start) = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
 
@@ -271,11 +276,8 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     additional_rewards_len.write(rewards_len + 1)
 
     reward_added.emit(reward)
-    #let one = Uint256(1,1)
-    #let (res : Uint256) = uint256_sub(rewards_len, one)
 
     return (res=rewards_len - 1)
-
 end
 
 @external
@@ -283,6 +285,8 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     player : felt
 ):   
     alloc_locals
+    assert_only_operator()
+
     let (completed_by) = completed_by.read(address=player)
     with_attr error_message("Quest already completed by this player"):
         assert completed_by = 1
@@ -290,7 +294,7 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let (local start) = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    local had_at_least_one_reward = 0
+    let (local had_at_least_one_reward) = 0
     _send_loop_reward{
         player=player, 
         stop=stop, 
@@ -323,7 +327,7 @@ func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let (local start) = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    let exists = 0
+    let (local exists) = 0
     _increase_reward_token{stop=stop, amount=amount, reward=reward, exists=exists}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
         assert exists = 1
@@ -335,6 +339,8 @@ end
 func update_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     new_value : felt
 ):
+    assert_only_operator()
+
     reputation_reward.write(new_value)
     reputation_reward_updated.emit(new_value)
     return ()
@@ -343,6 +349,8 @@ end
 @external
 func activate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ):
+    assert_only_operator()
+
     is_active.write(1)
     quest_activated.emit()
     return ()
@@ -352,6 +360,8 @@ end
 func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     withdrawal_address : felt
 ):
+    assert_only_operator()
+
     is_active.write(0)
     # transfer all tokens
     let (local start) = 0
@@ -360,6 +370,24 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
     quest_deactivated.emit()
     return ()
+end
+
+############
+# MODIFIER
+############
+func assert_only_operator{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+}():
+    let (caller) = get_caller_address()
+    with_attr error_message("caller is the zero address"):
+        assert_not_zero(caller)
+    end
+    let (is_op) = operators.read(caller)
+    with_attr error_message("only operators can call this function"):
+        assert is_op = 1
+    end
 end
 
 
@@ -420,7 +448,7 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     let reward_type = rewards_arr[reward_id].reward_type
     let reward_contract = rewards_arr[reward_id].reward_contract
 
-    let (contract_address) = get_contract_address
+    let (contract_address) = get_contract_address()
 
     if reward_type == RewardType.ERC20 :
         let (balance : Uint256) = IERC20.balanceOf(contract_address=reward_contract, account=contract_address)

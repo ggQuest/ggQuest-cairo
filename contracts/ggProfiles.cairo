@@ -42,13 +42,13 @@ struct ProfileData:
     member gained_reputation : felt
     member lost_reputation : felt
 
-    #todo :  third partied
 end
 
 struct ThirdParty:
     member third_party_id : felt
     member user_id : felt
 end
+
 
 ############
 #  STORAGE 
@@ -75,6 +75,10 @@ func third_parties(index : felt) -> (party : felt):
 end
 
 @storage_var
+func third_parties_len() -> (len : felt):
+end
+
+@storage_var
 func name() -> (res : felt):
 end
 
@@ -84,6 +88,15 @@ end
 
 @storage_var
 func operators(address : felt) -> (is_operator : felt):
+end
+
+# linked third party per user_address
+@storage_var
+func linked_third_party_per_user(user_address : felt, index : felt)->(third_party : felt):
+end
+
+@storage_var
+func linked_third_party_per_user_len(user_address : felt)->(len : felt):
 end
 
 ############
@@ -123,11 +136,11 @@ func add_supported_third_party(name : felt):
 end
 
 @event
-func link_third_part_to_profile(user_address : felt, third_party_id : felt, third_party_user_id : felt):
+func link_third_party_to_profile(user_address : felt, third_party_id : felt, third_party_user_id : felt):
 end
 
 @event
-func unlink_third_part_to_profile(user_address : felt, third_party_id : felt):
+func unlink_third_party_to_profile(user_address : felt, third_party_id : felt):
 end
 
 ############
@@ -226,11 +239,7 @@ end
 func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):  
-    let (caller) = get_caller_address
-    with_attr error_message("Only operators can manage operators"):
-    let (is_operator) = operators.read(caller)
-        assert is_operator = 1
-    end
+    assert_only_operator()
     operators.write(operator, 1)
     operator_added(operator)
     return ()
@@ -240,11 +249,7 @@ end
 func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):  
-    let (caller) = get_caller_address
-    with_attr error_message("Only operators can manage operators"):
-    let (is_operator) = operators.read(caller)
-        assert is_operator = 1
-    end
+    assert_only_operator()
     operators.write(operator, 0)
     operator_removed(operator)
     return ()
@@ -262,16 +267,18 @@ func mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         assert is_registered = 0
     end
     _set_user_data(caller, user_data)
-    let (new_user_data : ProfileData) = ProfileData(
-        profile_data.pseudo,
-        profile_data.profile_picture_URL, 
-        profile_data.cover_picture_URL, 
-        1 ,
-        profile_data.gained_reputation, 
-        profile_data.lost_reputation
-    )
 
-    profiles.write(caller, new_user_data)
+    #to check
+    #let (new_user_data : ProfileData) = ProfileData(
+      #  profile_data.pseudo,
+      #  profile_data.profile_picture_URL, 
+      #  profile_data.cover_picture_URL, 
+       # 1 ,
+       # profile_data.gained_reputation, 
+       # profile_data.lost_reputation
+    #)
+
+    #profiles.write(caller, new_user_data)
     minted.emit(caller, user_data.pseudo)
     return ()
 end
@@ -280,14 +287,14 @@ end
 func burn{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt
 ):  
-    let (caller) = get_caller_address()
-    let (is_op) = operators.read(caller)
-    with_attr error_message("Only operators have rights to delete users' data"):
-        assert is_op = 1
-    end
+    assert_only_operator()
 
-    let (null_object) = ProfileData(0,0,0,0,0,0)
+    let (profile) = profiles.read(user_address)
+    taken_pseudonymes.write(profile.pseudo, 0)
+
+    let (null_object : ProfileData) = ProfileData(0,0,0,0,0,0)
     profiles.write(user_address, null_object)
+
     burned.emit(user_address)
     return ()   
 end
@@ -312,12 +319,7 @@ end
 func increase_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, amount : felt
 ):
-    let (caller) = get_caller_address()
-    # check caller is operator 
-    let (is_op) = operators.read(caller)
-    with_attr error_message("Only operators can manage reputation"):
-        assert is_op = 1
-    end
+    assert_only_operator()
 
     # check profile is registered
     let (profile_data) = profiles.read(user_address)
@@ -336,7 +338,7 @@ func increase_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
     )
 
     profiles.write(user_address, new_user_data)
-    reputation_increased(user_address, amount)
+    reputation_increased.emit(user_address, amount)
     return ()
 end
 
@@ -344,12 +346,7 @@ end
 func decrease_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, amount : felt
 ):
-    let (caller) = get_caller_address()
-    # check caller is operator 
-    let (is_op) = operators.read(caller)
-    with_attr error_message("Only operators can manage reputation"):
-        assert is_op = 1
-    end
+    assert_only_operator()
 
     # check profile is registered
     let (profile_data) = profiles.read(user_address)
@@ -368,15 +365,19 @@ func decrease_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range
     )
 
     profiles.write(user_address, new_user_data)
-    reputation_decreased(user_address, amount)
+    reputation_decreased.emit(user_address, amount)
     return ()
 end
 
-#todo
 @external 
 func add_third_party{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    third_party_name : felt
 ):
-
+    assert_only_operator()
+    let (index) = third_parties_len.read()
+    third_parties.write(index, third_party_name)
+    add_supported_third_party.emit(third_party_name)
+    return ()
 end
 
 #todo
@@ -384,6 +385,21 @@ end
 func link_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     profile_address : felt, third_party_id : felt, third_party_user_id : felt 
 ):
+    assert_only_operator()
+    let (party) = third_parties.read(third_party_id)
+    with_attr error_message("No third party found with this ID"):
+        assert_not_equal(party, 0)
+    end
+    let (len_linked_third_parties) = linked_third_party_per_user_len.read(profile_address)
+    let (local start) = 0
+    _assert_not_already_linked{stop=stop, third_party_id=third_party_id, profile_address=profile_address}(start)
+    let (new_third_party : ThirdParty) = ThirdParty(
+        third_party_id,
+        third_party_user_id
+    )
+    linked_third_party_per_user.write(profile_address, len_linked_third_parties, new_third_party)
+    linked_third_party_per_user_len.write(profile_address, len_linked_third_parties + 1)
+    link_third_party_to_profile.emit(profile_address, third_party_id, third_party_user_id)
 
     return ()
 end
@@ -397,6 +413,23 @@ func unlink_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuilt
     return ()
 end
 
+############
+# MODIFIER
+############
+func assert_only_operator{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+}():
+    let (caller) = get_caller_address()
+    with_attr error_message("caller is the zero address"):
+        assert_not_zero(caller)
+    end
+    let (is_op) = operators.read(caller)
+    with_attr error_message("only operators can call this function"):
+        assert is_op = 1
+    end
+end
 
 ############
 #  INTERNAL 
@@ -431,20 +464,18 @@ func _get_registered_addresses{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
     registered_addresses_array : felt*,
-    index_start : felt,
     stop : felt,
-}(start : Uint256):
-    let (is_end_of_loop) = uint256_le(stop,start)
-    assert_not_zero(is_end_of_loop)
+}(start : felt):
+    if start == stop:
+        return ()
+    end
 
     let (registered_address : felt) = registered_addresses.read(start)
-    assert [registered_addresses + index_start * Uint256.SIZE] = registered_address
-    tempvar index_start = index_start + 1
+    assert [registered_addresses + start] = registered_address
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    let (next_start, _) = uint256_add(start, Uint256(1,0))
-    _get_registered_addresses(next_start)
+    _get_registered_addresses(start + 1)
 
 end
