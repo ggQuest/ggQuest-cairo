@@ -29,9 +29,9 @@ from starkware.cairo.common.math import (
 
 from contracts.tokens.ERC20.IERC20 import IERC20
 from contracts.tokens.ERC721.IERC721 import IERC721
-#from contracts.tokens.ERC1155.IERC1155 import IERC1155
+from contracts.tokens.ERC1155.IERC1155 import IERC1155
 
-#from contracts.interfaces.IggProfiles import IggProfiles
+from contracts.interfaces.IggProfiles import IggProfiles
 
 
 ############
@@ -114,7 +114,7 @@ func reward_added(reward : Reward):
 end
 
 @event 
-func reward_sent(player : felt, reward : Reward):
+func reward_sent(player : felt):
 end
 
 @event
@@ -254,6 +254,7 @@ end
 func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     reward : Reward
 ) -> (res : felt):
+    alloc_locals
 
     assert_only_operator()
 
@@ -263,7 +264,7 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     end
 
     # Verify if rewards are unique (not twice the same ERC721 for example)
-    let (local start) = 0
+    local start = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
 
@@ -291,10 +292,10 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     with_attr error_message("Quest already completed by this player"):
         assert completed_by = 1
     end
-    let (local start) = 0
+    local start = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    let (local had_at_least_one_reward) = 0
+    local had_at_least_one_reward = 0
     _send_loop_reward{
         player=player, 
         stop=stop, 
@@ -316,18 +317,19 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     IggProfiles.increase_reputation(contract_address=profiles, player, reputation_reward)
 
     #todo 
-    let (local reward : Reward) = Reward(RewardType.ERC20, 0, Uint256(0,0), Uint256(0,0), 0)
-    reward_sent.emit(player, reward)
+    #let (local reward : Reward) = Reward(RewardType.ERC20, 0, Uint256(0,0), Uint256(0,0), 0)
+    reward_sent.emit(player)
 end
 
 @external
 func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     amount : Uint256, reward : Reward
 ):
-    let (local start) = 0
+    alloc_locals
+    local start = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
-    let (local exists) = 0
+    local exists = 0
     _increase_reward_token{stop=stop, amount=amount, reward=reward, exists=exists}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
         assert exists = 1
@@ -360,11 +362,12 @@ end
 func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     withdrawal_address : felt
 ):
+    alloc_locals
     assert_only_operator()
 
     is_active.write(0)
     # transfer all tokens
-    let (local start) = 0
+    local start = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
     _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
@@ -439,7 +442,6 @@ func _verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
 end
 
 
-
 func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     reward_id : felt, withdrawal_address : felt
 ):
@@ -458,7 +460,7 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
         end
     else:
         
-        let (amount) = rewards_arr[reward_id].id
+        let amount = rewards_arr[reward_id].id
 
         if reward_type ==  RewardType.ERC721 :
             let (success) = IERC721.transferFrom(
@@ -570,13 +572,13 @@ func _increase_reward_token{
         let (local amount_test) = reward_test.amount + amount - players_len
         
         _verifyTokenOwnershipFor(reward_test)
-        let (new_reward : Reward) = Reward(
-            additional_rewards.reward_type, 
-            additional_rewards.reward_contract, 
-            additional_rewards.token_amount,
-            additional_rewards.amount + amount,
-            additional_rewards.id
-        )
+        local new_reward : Reward
+        assert new_reward.reward_type = additional_rewards.reward_type
+        assert new_reward.reward_contract = additional_rewards.reward_contract
+        assert new_reward.token_amount = additional_rewards.token_amount
+        assert new_reward.amount = additional_rewards.amount + amount
+        assert new_reward.id = additional_rewards.id
+           
         additional_rewards.write(start, new_reward)       
     end
     _increase_reward_token(start + 1)
