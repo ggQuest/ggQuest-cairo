@@ -27,8 +27,6 @@ from starkware.cairo.common.uint256 import (
     uint256_sub,
     uint256_le,
     uint256_lt,
-    uint256_check,
-    assert_not_zero
 )
 
 ############
@@ -36,19 +34,19 @@ from starkware.cairo.common.uint256 import (
 ############
 
 @event
-func operator_added(operator : felt):
+func OperatorAdded(operator : felt):
 end
 
 @event
-func remove_operator(operator : felt):
+func RemoveOperator(operator : felt):
 end
 
 @event 
-func quest_created(quest_id: felt, game_name: felt):
+func QuestCreated(quest_id: felt, game_name: felt):
 end
 
 @event
-func game_added(game_name: felt, game_id: felt):
+func GameAdded(game_name: felt, game_id: felt):
 end
 
 ############
@@ -56,71 +54,71 @@ end
 ############
 
 @storage_var
-func operators(address : felt) -> (is_operator : felt):
+func Operators(address : felt) -> (is_operator : felt):
 end
 
-# Players' profiles (ggProfiles address contract)
+# Players' Profiles (ggProfiles address contract)
 @storage_var
-func profiles() -> (res : felt):
+func Profiles() -> (res : felt):
 end
 
 # ggQuest' contract address
 @storage_var
-func gg_quest_contract() -> (res : felt):
+func Gg_Quest_Contract() -> (res : felt):
 end
 
 
 @storage_var
-func completed_quests(completed_quests : felt) -> (number : felt):
+func Completed_Quests(completed_quests : felt) -> (number : felt):
 end
 
-# questID => number of profiles who completed the quest
+# questID => number of Profiles who completed the quest
 @storage_var
-func completed_quests_by_profile(profile : felt, index : felt) -> (quest_id : felt):
+func Completed_Quests_By_Profile(profile : felt, index : felt) -> (quest_id : felt):
 end
 
 @storage_var
-func completed_quests_by_profile_len(profile : felt) -> (len : felt):
+func Completed_Quests_By_Profile_Len(profile : felt) -> (len : felt):
 end
 
 # array of game name
 @storage_var
-func games(game_id : felt) -> (game_name : felt):
+func Games(game_id : felt) -> (game_name : felt):
 end
 
 @storage_var
-func games_len() -> (len : felt):
+func Games_len() -> (len : felt):
 end
 
 @storage_var
-func quests(index : felt) -> (contract : felt):
+func Quests(index : felt) -> (contract : felt):
 end
 
 @storage_var
-func quests_len() -> (len : felt):
+func Quests_Len() -> (len : felt):
 end
 
 @storage_var 
-func quests_metadata_base_URI() -> (res : felt):
+func Quests_Metadata_Base_URI() -> (res : felt):
 end
 
 # Base URI to get game metadata
 @storage_var
-func games_metadata_base_URI() -> (res : felt):
+func Games_Metadata_Base_URI() -> (res : felt):
 end
 
 
 @storage_var 
-func game_id_to_quest_ids(game_id : felt, index : felt) -> (quest_id : felt):
+func Game_Id_To_Quest_Ids(game_id : felt, index : felt) -> (quest_id : felt):
 end
 
 @storage_var
-func game_id_to_quest_ids_len(game_id : felt) -> (len : felt):
+func Game_Id_To_Quest_Ids_Len(game_id : felt) -> (len : felt):
 end
 
 
 @storage_var
-func quest_id_to_game_id(quest_id : felt) -> (game_id : felt):
+func Quest_Id_To_Game_Id(quest_id : felt) -> (game_id : felt):
 end
 
 ############
@@ -130,34 +128,34 @@ end
 @view
 func get_ggQuest_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-    let (contract) = gg_quest_contract.read()
+    let (contract) = Gg_Quest_Contract.read()
     return (res=contract)
 end
 @view
 func get_ggProfile_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-    let (contract) = profiles.read()
+    let (contract) = Profiles.read()
     return (res=contract)
 end
 
 @view
 func get_quests{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-) -> (quests_len : felt, quests : felt*):
+) -> (quests_len : felt, Gg_Quest_Contract : felt*):
     alloc_locals
-    let (quests_len) = quests_len.read()
+    let (quests_len) = Quests_Len.read()
     let (local quests_array : felt*) = alloc()
     local start = 0
     let stop = quests_len
 
     _get_quests{quests_array=quests_array, stop=stop}(start)
-    return (quests_len=quests_len, quests=quests_array)
+    return (quests_len=quests_len, Gg_Quest_Contract=quests_array)
 end
 
 @view
 func get_games{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (games_len : felt, games : felt*):
     alloc_locals
-    let (games_len) = games_len.read()
+    let (games_len) = Games_len.read()
     let (local games_array : felt*) = alloc()
     local start = 0
     let stop = games_len
@@ -170,14 +168,14 @@ end
 @view
 func get_quests_metadata_base_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (res : felt):
-    let (res) = quests_metadata_base_URI.read()
+    let (res) = Quests_Metadata_Base_URI.read()
     return (res)
 end
 
 @view
 func get_games_metadata_base_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (res : felt):
-    let (res) = games_metadata_base_URI.read()
+    let (res) = Games_Metadata_Base_URI.read()
     return (res)
 end
 
@@ -185,7 +183,7 @@ end
 func get_quest_id_to_game_id{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     quest_id : felt
 ) -> (game_id : felt):
-    let (game_id) = quest_id_to_game_id.read(quest_id)
+    let (game_id) = Quest_Id_To_Game_Id.read(quest_id)
     return (game_id)
 end
 
@@ -193,7 +191,7 @@ end
 func get_operators{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     address : felt
 ) -> (is_operator : felt):
-    let (is_operator) = operators.read(address)
+    let (is_operator) = Operators.read(address)
     return (is_operator)
 end
 
@@ -201,12 +199,12 @@ end
 func get_quest_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     quest_id : felt
 ) -> (res : felt):
-    let (quests_len) = quests_len.read()
+    let (quests_len) = Quests_Len.read()
     with_attr error_message("QuestID does not exist"):
         assert_lt(quest_id, quests_len)
     end
-    let (quest) = quests_read(quest_id)
-    let (gg_quest_address) = gg_quest_contract.read()
+    let (quest) = Quests.read(quest_id)
+    let (gg_quest_address) = Gg_Quest_Contract.read()
     let (res) = IggQuest.get_quest_URI(contract_address=gg_quest_address)
 
     return (res=res)
@@ -217,7 +215,7 @@ func get_url_metadata{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     game_id : felt
 )->(res : felt):
 # todo
-    let (games_metadata) = games_metadata_base_URI.read()
+    let (games_metadata) = Games_Metadata_Base_URI.read()
     return (res=games_metadata + game_id)
 end
 
@@ -227,7 +225,7 @@ func get_game_id_to_quest_id{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
 ) -> (quest_ids_len : felt, quest_ids : felt*):
     alloc_locals
     local start = 0
-    let (stop) = game_id_to_quest_id_len(game_id)
+    let (stop) = Game_Id_To_Quest_Ids_Len.read(game_id)
     let (local array : felt*) = alloc()
     _get_game_id_to_quest_id{array=array, game_id=game_id, stop=stop}(start)
     return (quest_ids_len=stop, quest_ids=array)
@@ -241,10 +239,10 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     gg_profiles_contract : felt, questsMetadataBaseURI : felt, gamesMetadataBaseURI : felt
 ):
     let (caller_address) = get_caller_address()
-    profiles.write(gg_profiles_contract)
+    Profiles.write(gg_profiles_contract)
     gamesMetadataBaseURI.write(gamesMetadataBaseURI)
     questsMetadatBaseURI.write(questsMetadataBaseURI)
-    operators.write(caller_address, true)
+    Operators.write(caller_address, true)
     return ()
 end
 
@@ -258,8 +256,8 @@ func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     operator : felt
 ):
     assert_only_operator()
-    operators.write(operator, true)
-    operator_added.emit(operator=operator)
+    Operators.write(operator, true)
+    OperatorAdded.emit(operator=operator)
     return ()
 end
 
@@ -268,8 +266,8 @@ func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     operator : felt
 ):
     assert_only_operator()
-    operators.write(operator, false)
-    operator_removed.emit(operator)
+    Operators.write(operator, false)
+    OperatorRemoved.emit(operator)
     return ()
 end
 
@@ -279,24 +277,24 @@ func create_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
 ) -> (res : felt):
     alloc_locals
     assert_only_operator()
-    let (quests_len) = quests_len.read()
+    let (quests_len) = Quests_Len.read()
     let quest_id = quests_len
-    # todo : ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, profiles);
+    # todo : ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, Profiles);
     let new_quest = 0
-    quests.write(quests_len, new_quest)
-    quests_len.write(quests_len + 1)
+    Quests.write(quests_len, new_quest)
+    Quests_Len.write(quests_len + 1)
 
-    quest_id_to_game_id.write(quest_id, game_id)
-    let (index) = game_id_to_quest_ids_len.read(game_id)
-    game_id_to_quest_ids.write(game_id, index, quest_id)
-    game_id_to_quest_ids_len.write(game_id, index + 1)
+    Quest_Id_To_Game_Id.write(quest_id, game_id)
+    let (index) = Game_Id_To_Quest_Ids_Len.read(game_id)
+    Game_Id_To_Quest_Ids.write(game_id, index, quest_id)
+    Game_Id_To_Quest_Ids_len.write(game_id, index + 1)
 
     # update after pushing quest_id to quest_ids
-    let (profiles_contract) = profiles.read()
+    let (profiles_contract) = Profiles.read()
     IggProfiles.add_operator(contract_address=profiles_contract, new_quest)
 
-    let (game_name) = games.read(game_id)
-    quest_created.emit(quest_id, game_name)
+    let (game_name) = Games.read(game_id)
+    QuestCreated.emit(quest_id, game_name)
 
     return (res=quest_id)
 
@@ -308,11 +306,11 @@ func add_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_
     quest_id : felt, operator : felt
 ):
     assert_only_operator()
-    let (quests_len) = quests_len.read()
+    let (quests_len) = Quests_Len.read()
     with_attr error_message("QuestID does not exist"):
         assert_lt(quest_id, quests_len)
     end
-    let (gg_quest_address) = quests_read.read(quest_id)
+    let (gg_quest_address) = Quests.read(quest_id)
 
     IggQuest.add_operator(contract_address=gg_quest_address, operator)
     return ()
@@ -324,11 +322,11 @@ func remove_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ran
     quest_id : felt, address : felt
 ):
     assert_only_operator()
-    let (quests_len) = quests_len.read()
+    let (quests_len) = Quests_Len.read()
     with_attr error_message("QuestID does not exist"):
         assert_lt(quest_id, quests_len)
     end
-    let (gg_quest_address) = quests_read.read(quest_id)
+    let (gg_quest_address) = Quests.read(quest_id)
 
     IggQuest.remove_operator(contract_address=gg_quest_address, operator)
     return ()
@@ -341,9 +339,9 @@ func add_game{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}
     game_name : felt
 )->(res : felt):
     assert_only_operator()
-    let (games_len) = games_len.read()
-    games.write(games_len, game_name)
-    game_added.emit(game_name, game_len - 1)
+    let (games_len) = Games_Len.read()
+    Games.write(games_len, game_name)
+    GameAdded.emit(game_name, game_len - 1)
     return (res=game_len - 1)
 end
 
@@ -359,7 +357,7 @@ func assert_only_operator{
     with_attr error_message("caller is the zero address"):
         assert_not_zero(caller)
     end
-    let (is_op) = operators.read(caller)
+    let (is_op) = Operators.read(caller)
     with_attr error_message("only operators can call this function"):
         assert is_op = 1
     end
@@ -380,7 +378,7 @@ func _get_quests{
         return ()
     end
 
-    let (quest : felt) = quests.read(start)
+    let (quest : felt) = Quest.read(start)
     assert [quests_array + start] = quest
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr
@@ -400,7 +398,7 @@ func _get_games{
         return ()
     end
 
-    let (game : felt) = games.read(start)
+    let (game : felt) = Games.read(start)
     assert [games_array + start] = game
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr
