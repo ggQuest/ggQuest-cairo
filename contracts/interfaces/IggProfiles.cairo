@@ -6,6 +6,7 @@ from contracts.ggProfiles import UpdatableByUserData
 
 @contract_interface
 namespace IggProfiles:
+
     func add_operator(operator_address : felt):
     end
 
