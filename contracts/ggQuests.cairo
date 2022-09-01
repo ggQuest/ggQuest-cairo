@@ -361,6 +361,7 @@ func assert_only_operator{
     with_attr error_message("only operators can call this function"):
         assert is_op = 1
     end
+    return ()
 end
 
 ############
@@ -384,7 +385,7 @@ func get_quests_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    get_quests_loop(start + 1)
+    return get_quests_loop(start + 1)
 end
 
 func get_games_loop{
@@ -404,7 +405,7 @@ func get_games_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    get_games_loop(start + 1)
+    return get_games_loop(start + 1)
 end
 func get_game_id_to_quest_id_loop{
     syscall_ptr : felt*,

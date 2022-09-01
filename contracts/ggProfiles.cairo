@@ -13,6 +13,7 @@ from starkware.cairo.common.math_cmp import (
 )
 from starkware.cairo.common.math import assert_not_equal
 
+from starkware.cairo.common.bool import TRUE, FALSE
 
 
 ############
@@ -149,7 +150,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     Name.write(_name)
     Ticker.write(_ticker)
     let (caller) = get_caller_address()
-    Operators.write(caller, 1)
+    Operators.write(caller, TRUE)
     return ()
 end
 
@@ -189,10 +190,10 @@ func get_is_available{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     pseudo : felt
 ) -> (res : felt):
     let (is_taken) = Taken_Pseudonymes.read(pseudo)
-    if is_taken == 1:
-        return (res=0)
+    if is_taken == TRUE:
+        return (res=FALSE)
     end
-    return (res=1)
+    return (res=TRUE)
 end
 
 @view
@@ -240,7 +241,7 @@ func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     operator : felt
 ):  
     assert_only_operator()
-    Operators.write(operator, 1)
+    Operators.write(operator, TRUE)
     OperatorAdded.emit(operator)
     return ()
 end
@@ -250,7 +251,7 @@ func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     operator : felt
 ):  
     assert_only_operator()
-    Operators.write(operator, 0)
+    Operators.write(operator, FALSE)
     OperatorRemoved.emit(operator)
     return ()
 end
@@ -280,7 +281,7 @@ func burn{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     assert_only_operator()
 
     let (profile) = Profiles.read(user_address)
-    Taken_Pseudonymes.write(profile.pseudo, 0)
+    Taken_Pseudonymes.write(profile.pseudo, FALSE)
 
     local null_account : ProfileData
     assert null_account.pseudo = 0
@@ -469,8 +470,9 @@ func assert_only_operator{
     end
     let (is_op) = Operators.read(caller)
     with_attr error_message("only operators can call this function"):
-        assert is_op = 1
+        assert is_op = TRUE
     end
+    return ()
 end
 
 ############
@@ -494,7 +496,7 @@ func assert_not_already_linked_loop{
         assert_not_equal(third_party.third_party_id, third_party_id)
     end
 
-    assert_not_already_linked_loop(start + 1)
+    return assert_not_already_linked_loop(start + 1)
 end
 
 func verify_third_party_found_loop{
@@ -527,7 +529,7 @@ func verify_third_party_found_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
     
-    verify_third_party_found_loop(start + 1)
+    return verify_third_party_found_loop(start + 1)
 end
 
 func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -549,7 +551,7 @@ func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
         current_data.lost_reputation
     )
 
-    Taken_Pseudonymes.write(new_pseudo, 1)
+    Taken_Pseudonymes.write(new_pseudo, TRUE)
     Profiles.write(caller, updated_data)
     return ()
 end
@@ -571,7 +573,7 @@ func get_registered_addresses_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    get_registered_addresses_loop(start + 1)
+    return get_registered_addresses_loop(start + 1)
 
 end
 
@@ -592,6 +594,6 @@ func get_third_parties_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    get_third_parties_loop(start + 1)
+    return get_third_parties_loop(start + 1)
 
 end

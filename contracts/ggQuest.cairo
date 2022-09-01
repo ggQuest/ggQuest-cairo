@@ -6,6 +6,8 @@ from starkware.starknet.common.syscalls import (
     get_caller_address,
     get_contract_address
 )
+from starkware.cairo.common.bool import TRUE, FALSE
+
 
 from starkware.cairo.common.uint256 import (
     Uint256, 
@@ -110,7 +112,7 @@ func OperatorRemoved(operator : felt):
 end
 
 @event
-func reward_added(reward : Reward):
+func RewardAdded(reward : Reward):
 end
 
 @event 
@@ -157,7 +159,7 @@ func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     alloc_locals
     let (rewards_len) = Additional_Rewards_Len.read()
     let (local rewards_array : Reward*) = alloc()
-    let (local start) = 0
+    local start = 0
     let stop = rewards_len
     # to add a check if its zero
     
@@ -171,7 +173,7 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     alloc_locals
     let (players_len) = Players_Len.read()
     let (local players_array : felt*) = alloc()
-    let (local start) = 0
+    local start = 0
     let stop = players_len
     # to add a check if its zero
 
@@ -244,7 +246,7 @@ func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     operator : felt
 ):
     assert_only_operator()
-    Operators.write(operator, 0)
+    Operators.write(operator, TRUE)
     OperatorRemoved(operator)
 
     return ()
@@ -260,7 +262,7 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
 
     let (active) = Is_Active.read()
     with_attr error_message("Rewards cannot be added after quest activation"):
-        assert active = 0
+        assert active = FALSE
     end
 
     # Verify if rewards are unique (not twice the same ERC721 for example)
@@ -276,7 +278,7 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     Additional_Rewards.write(rewards_len, reward)
     Additional_Rewards_Len.write(rewards_len + 1)
 
-    reward_added.emit(reward)
+    RewardAdded.emit(reward)
 
     return (res=rewards_len - 1)
 end
@@ -290,19 +292,19 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 
     let (completed_by) = Completed_By.read(address=player)
     with_attr error_message("Quest already completed by this player"):
-        assert completed_by = 1
+        assert completed_by = FALSE
     end
     local start = 0
     let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
-    local had_at_least_one_reward = 0
+    local had_at_least_one_reward = FALSE
     send_reward_loop{
         player=player, 
         stop=stop, 
         had_at_least_one_reward=had_at_least_one_reward
     }(start)
     with_attr error_message("All rewards have already been distributed"):
-        assert had_at_least_one_reward = 1
+        assert had_at_least_one_reward = TRUE
     end
     
     let (players_len) = Players_Len.read()
@@ -329,10 +331,10 @@ func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     local start = 0
     let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
-    local exists = 0
+    local exists = FALSE
     increase_reward_token_loop{stop=stop, amount=amount, reward=reward, exists=exists}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
-        assert exists = 1
+        assert exists = TRUE
     end
     return ()
 end
@@ -344,7 +346,7 @@ func update_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     assert_only_operator()
 
     Reputation_Reward.write(new_value)
-    R.emit(new_value)
+    ReputationRewardUpdated.emit(new_value)
     return ()
 end
 
@@ -353,8 +355,8 @@ func activate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
 ):
     assert_only_operator()
 
-    Is_Active.write(1)
-    Q.emit()
+    Is_Active.write(TRUE)
+    QuestActivated.emit()
     return ()
 end
 
@@ -365,13 +367,13 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     alloc_locals
     assert_only_operator()
 
-    Is_Active.write(0)
+    Is_Active.write(FALSE)
     # transfer all tokens
     local start = 0
     let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
     deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
-    Q.emit()
+    QuestDeactivated.emit()
     return ()
 end
 
@@ -389,8 +391,9 @@ func assert_only_operator{
     end
     let (is_op) = Operators.read(caller)
     with_attr error_message("only operators can call this function"):
-        assert is_op = 1
+        assert is_op = TRUE
     end
+    return ()
 end
 
 
@@ -517,10 +520,9 @@ func deactivate_loop{
         return ()
     end
 
-    _withdraw_reward(start, withdrawal_address)
+    withdraw_reward(start, withdrawal_address)
 
-    deactivate_loop(start + 1)
-    return ()
+    return deactivate_loop(start + 1)
 end
 
 #todo
@@ -543,7 +545,7 @@ func verify_uniqueness_of_rewards_loop{
         assert_not_equal(rhAR, rhR)
     end
 
-    verify_uniqueness_of_rewards_loop(start + 1)
+    return verify_uniqueness_of_rewards_loop(start + 1)
     return ()
 end
 
@@ -566,7 +568,7 @@ func increase_reward_token_loop{
     let (rhAR) = _reward_hash(additional_reward)
     let (rhR) = _reward_hash(reward)
     if rhAR == rhR :
-        tempvar exists = 1
+        tempvar exists = TRUE
         let (local reward_test : Reward) = Additional_Rewards.read(start)
         let (players_len) = Players_Len.read()
         let (local amount_test) = reward_test.amount + amount - players_len
@@ -581,7 +583,7 @@ func increase_reward_token_loop{
            
         Additional_Rewards.write(start, new_reward)       
     end
-    increase_reward_token_loop(start + 1)
+    return increase_reward_token_loop(start + 1)
 end
 
 func _transfer_tokens{
@@ -611,7 +613,7 @@ func send_reward_loop{
     let (enough_rewards) = uint256_le(players_len, reward.amount)
     
     if enough_rewards == 1 :
-        tempvar had_at_least_one_reward = 1
+        tempvar had_at_least_one_reward = TRUE
         let token_address = reward.reward_contract
 
         if reward.reward_type == RewardType.ERC20:
@@ -625,9 +627,8 @@ func send_reward_loop{
             end
         end
     end
-    send_reward_loop(start + 1)
+   return send_reward_loop(start + 1)
 
-    return ()
 end
 
 func get_additional_rewards_loop{
@@ -647,7 +648,7 @@ func get_additional_rewards_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    get_additional_rewards_loop(start + 1)
+    return get_additional_rewards_loop(start + 1)
 end
 
 func get_players_loop{
@@ -666,5 +667,5 @@ func get_players_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    get_players_loop(start + 1)
+    return get_players_loop(start + 1)
 end
