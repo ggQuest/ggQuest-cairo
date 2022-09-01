@@ -161,7 +161,7 @@ func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let stop = rewards_len
     # to add a check if its zero
     
-    _get_additional_rewards{rewards_array=rewards_array, stop=stop}(start)
+    get_additional_rewards_loop{rewards_array=rewards_array, stop=stop}(start)
     return (rewards_len=rewards_len, rewards=rewards_array)
 end
 
@@ -175,7 +175,7 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let stop = players_len
     # to add a check if its zero
 
-    _get_players{players_array=players_array, stop=stop}(start)
+    get_players_loop{players_array=players_array, stop=stop}(start)
     return (players_len=players_len, players=players_array)
 end
 
@@ -269,7 +269,7 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     let stop = rewards_len
 
     # loop to check if rewards are unique
-    _verifyUniquenessOfRewards{stop=stop, reward=reward}(start)
+    verify_uniqueness_of_rewards_loop{stop=stop, reward=reward}(start)
 
     _verifyTokenOwnershipFor(reward)
 
@@ -296,7 +296,7 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
     local had_at_least_one_reward = 0
-    _send_loop_reward{
+    send_reward_loop{
         player=player, 
         stop=stop, 
         had_at_least_one_reward=had_at_least_one_reward
@@ -330,7 +330,7 @@ func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
     local exists = 0
-    _increase_reward_token{stop=stop, amount=amount, reward=reward, exists=exists}(start)
+    increase_reward_token_loop{stop=stop, amount=amount, reward=reward, exists=exists}(start)
     with_attr error_message("Given reward (token address) doesn't exist for this quest"):
         assert exists = 1
     end
@@ -370,7 +370,7 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     local start = 0
     let (rewards_len) = Additional_Rewards_Len.read()
     let stop = rewards_len
-    _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
+    deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
     Q.emit()
     return ()
 end
@@ -506,7 +506,7 @@ func _reward_hash{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     #todo
 end
 
-func _deactivate_loop{
+func deactivate_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -519,12 +519,12 @@ func _deactivate_loop{
 
     _withdraw_reward(start, withdrawal_address)
 
-    _deactivate_loop(start + 1)
+    deactivate_loop(start + 1)
     return ()
 end
 
 #todo
-func _verifyUniquenessOfRewards{
+func verify_uniqueness_of_rewards_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -543,11 +543,11 @@ func _verifyUniquenessOfRewards{
         assert_not_equal(rhAR, rhR)
     end
 
-    _verifyUniquenessOfRewards(start + 1)
+    verify_uniqueness_of_rewards_loop(start + 1)
     return ()
 end
 
-func _increase_reward_token{
+func increase_reward_token_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -581,7 +581,7 @@ func _increase_reward_token{
            
         Additional_Rewards.write(start, new_reward)       
     end
-    _increase_reward_token(start + 1)
+    increase_reward_token_loop(start + 1)
 end
 
 func _transfer_tokens{
@@ -593,7 +593,7 @@ func _transfer_tokens{
 }(start : felt):
 end
 
-func _send_loop_reward{
+func send_reward_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -625,12 +625,12 @@ func _send_loop_reward{
             end
         end
     end
-    _send_loop_reward(start + 1)
+    send_reward_loop(start + 1)
 
     return ()
 end
 
-func _get_additional_rewards{
+func get_additional_rewards_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -647,10 +647,10 @@ func _get_additional_rewards{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    _get_additional_rewards(start + 1)
+    get_additional_rewards_loop(start + 1)
 end
 
-func _get_players{
+func get_players_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -666,5 +666,5 @@ func _get_players{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    _get_players(start + 1)
+    get_players_loop(start + 1)
 end

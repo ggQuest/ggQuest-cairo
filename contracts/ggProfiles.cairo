@@ -215,7 +215,7 @@ func get_registered_addresses{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     let stop = len
     # to add a check if its zero
 
-    _get_registered_addresses{registered_addresses_array=registered_addresses_array, stop=stop}(start)
+    get_registered_addresses_loop{registered_addresses_array=registered_addresses_array, stop=stop}(start)
     return (registered_addresses_len=len, registered_addresses=registered_addresses_array)
 end
 
@@ -227,7 +227,7 @@ func get_third_parties{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_c
     let (local third_parties : felt*) = alloc()
     let stop = len
     local start = 0
-    _get_third_parties{stop=stop, array=third_parties}(start)
+    get_third_parties_loop{stop=stop, array=third_parties}(start)
     return (third_parties_len=len, third_parties=third_parties)
 end
 
@@ -395,7 +395,7 @@ func link_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin
     local start = 0
     let stop = len_linked_third_parties
 
-    _assert_not_already_linked{
+    assert_not_already_linked_loop{
         stop=stop, 
         third_party_id=third_party_id, 
         profile_address=profile_address
@@ -430,7 +430,7 @@ func unlink_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuilt
     local start = 0
     let stop = len_linked_third_parties
 
-    _verify_third_party_found{
+    verify_third_party_found_loop{
         removed=removed, 
         removed_index=removed_index,
         profile_address=profile_address, 
@@ -477,7 +477,7 @@ end
 #  INTERNAL 
 ############
 
-func _assert_not_already_linked{
+func assert_not_already_linked_loop{
     syscall_ptr : felt*, 
     pedersen_ptr : HashBuiltin*, 
     range_check_ptr,
@@ -494,10 +494,10 @@ func _assert_not_already_linked{
         assert_not_equal(third_party.third_party_id, third_party_id)
     end
 
-    _assert_not_already_linked(start + 1)
+    assert_not_already_linked_loop(start + 1)
 end
 
-func _verify_third_party_found{
+func verify_third_party_found_loop{
     syscall_ptr : felt*, 
     pedersen_ptr : HashBuiltin*, 
     range_check_ptr,
@@ -527,7 +527,7 @@ func _verify_third_party_found{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
     
-    _verify_third_party_found(start + 1)
+    verify_third_party_found_loop(start + 1)
 end
 
 func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -554,7 +554,7 @@ func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     return ()
 end
 
-func _get_registered_addresses{
+func get_registered_addresses_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -571,11 +571,11 @@ func _get_registered_addresses{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    _get_registered_addresses(start + 1)
+    get_registered_addresses_loop(start + 1)
 
 end
 
-func _get_third_parties{
+func get_third_parties_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -592,6 +592,6 @@ func _get_third_parties{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    _get_third_parties(start + 1)
+    get_third_parties_loop(start + 1)
 
 end

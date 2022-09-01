@@ -147,7 +147,7 @@ func get_quests{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     local start = 0
     let stop = quests_len
 
-    _get_quests{quests_array=quests_array, stop=stop}(start)
+    get_quests_loop{quests_array=quests_array, stop=stop}(start)
     return (quests_len=quests_len, Gg_Quest_Contract=quests_array)
 end
 
@@ -155,13 +155,13 @@ end
 func get_games{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (games_len : felt, games : felt*):
     alloc_locals
-    let (games_len) = Games_len.read()
+    let (games_len) = Games_Len.read()
     let (local games_array : felt*) = alloc()
     local start = 0
     let stop = games_len
     # to add a check if its zero
 
-    _get_games{games_array=games_array, index_start=index_start, stop=stop}(start)
+    get_games_loop{games_array=games_array, index_start=index_start, stop=stop}(start)
     return (games_len=games_len, games=games_array)
 end
 
@@ -227,7 +227,7 @@ func get_game_id_to_quest_id{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
     local start = 0
     let (stop) = Game_Id_To_Quest_Ids_Len.read(game_id)
     let (local array : felt*) = alloc()
-    _get_game_id_to_quest_id{array=array, game_id=game_id, stop=stop}(start)
+    get_game_id_to_quest_id_loop{array=array, game_id=game_id, stop=stop}(start)
     return (quest_ids_len=stop, quest_ids=array)
 end
 
@@ -287,7 +287,7 @@ func create_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     Quest_Id_To_Game_Id.write(quest_id, game_id)
     let (index) = Game_Id_To_Quest_Ids_Len.read(game_id)
     Game_Id_To_Quest_Ids.write(game_id, index, quest_id)
-    Game_Id_To_Quest_Ids_len.write(game_id, index + 1)
+    Game_Id_To_Quest_Ids_Len.write(game_id, index + 1)
 
     # update after pushing quest_id to quest_ids
     let (profiles_contract) = Profiles.read()
@@ -367,11 +367,11 @@ end
 # INTERNAL
 ############
 
-func _get_quests{
+func get_quests_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-    quests_array : Reward*,
+    quests_array : felt*,
     stop : felt,
 }(start : felt):
     if start == stop:
@@ -384,14 +384,14 @@ func _get_quests{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    _get_quests(start + 1)
+    get_quests_loop(start + 1)
 end
 
-func _get_games{
+func get_games_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
-    games_array : Reward*,
+    games_array : felt*,
     stop : felt,
 }(start : felt):
     if start == stop:
@@ -404,21 +404,21 @@ func _get_games{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    _get_games(start + 1)
+    get_games_loop(start + 1)
 end
-func _get_game_id_to_quest_id{
+func get_game_id_to_quest_id_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
     array : felt*,
-    game_id : game_id,
+    game_id : felt,
     stop : felt,
 }(start : felt):
     if start == stop:
         return ()
     end
-    let (quest_id) = game_id_to_quest_id.read(game_id, start)
+    let (quest_id) = Game_Id_To_Quest_Id.read(game_id, start)
     assert [array + start] = quest_id
-    return _get_game_id_to_quest_id(start + 1)
+    return get_game_id_to_quest_id_loop(start + 1)
 end
 
