@@ -8,16 +8,10 @@ from starkware.starknet.common.syscalls import (
     get_caller_address,
     get_contract_address
 )
-
-from starkware.cairo.common.uint256 import (
-    Uint256, 
-    uint256_add,
-    uint256_sub,
-    uint256_le,
-    uint256_lt,
-    uint256_check,
-    assert_not_zero
+from starkware.cairo.common.math_cmp import (
+    is_not_zero
 )
+
 
 
 ############
@@ -92,11 +86,11 @@ end
 
 # linked third party per user_address
 @storage_var
-func linked_third_party_per_user(user_address : felt, index : felt)->(third_party : felt):
+func linked_third_party_per_user(user_address : felt, index : felt) -> (third_party : felt):
 end
 
 @storage_var
-func linked_third_party_per_user_len(user_address : felt)->(len : felt):
+func linked_third_party_per_user_len(user_address : felt) -> (len : felt):
 end
 
 ############
@@ -136,11 +130,11 @@ func add_supported_third_party(name : felt):
 end
 
 @event
-func link_third_party_to_profile(user_address : felt, third_party_id : felt, third_party_user_id : felt):
+func third_party_linked_to_profile(user_address : felt, third_party_id : felt, third_party_user_id : felt):
 end
 
 @event
-func unlink_third_party_to_profile(user_address : felt, third_party_id : felt):
+func third_party_unlinked_to_profile(user_address : felt, third_party_id : felt):
 end
 
 ############
@@ -208,12 +202,6 @@ func has_profile_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     return (res=profile_data.is_registered)
 end
 
-#todo 
-@view
-func get_third_parties{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-) -> (res : felt):
-    return (res=0)
-end
 
 @view
 func get_registered_addresses{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
@@ -222,13 +210,24 @@ func get_registered_addresses{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     alloc_locals
     let (registered_addresses_len) = registered_addresses_len.read()
     let (local registered_addresses_array : felt*) = alloc()
-    let start = Uint256(0,0)
+    let (local start) = 0
     let stop = registered_addresses_len
-    local index_start = 0
     # to add a check if its zero
 
-    _get_registered_addresses{registered_addresses=registered_addresses_array, index_start=index_start, stop=stop}(start)
+    _get_registered_addresses{registered_addresses=registered_addresses_array, stop=stop}(start)
     return (registered_addresses_len=registered_addresses_len, registered_addresses=registered_addresses_array)
+end
+
+@view 
+func get_third_parties{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+) -> (third_parties_len : felt, third_parties : felt*):
+    alloc_locals
+    let (third_parties_len) = third_parties_len.read()
+    let (local third_parties : felt*) = alloc()
+    let stop = third_parties_len
+    let (local start) = 0
+    _get_third_parties{stop=stop, array=third_parties}(start)
+    return (third_parties_len, third_parties)
 end
 
 ############
@@ -388,10 +387,11 @@ func link_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin
     assert_only_operator()
     let (party) = third_parties.read(third_party_id)
     with_attr error_message("No third party found with this ID"):
-        assert_not_equal(party, 0)
+        is_not_zero(party)
     end
     let (len_linked_third_parties) = linked_third_party_per_user_len.read(profile_address)
     let (local start) = 0
+    let stop = len_linked_third_parties
     _assert_not_already_linked{stop=stop, third_party_id=third_party_id, profile_address=profile_address}(start)
     let (new_third_party : ThirdParty) = ThirdParty(
         third_party_id,
@@ -399,7 +399,7 @@ func link_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin
     )
     linked_third_party_per_user.write(profile_address, len_linked_third_parties, new_third_party)
     linked_third_party_per_user_len.write(profile_address, len_linked_third_parties + 1)
-    link_third_party_to_profile.emit(profile_address, third_party_id, third_party_user_id)
+    third_party_linked_to_profile.emit(profile_address, third_party_id, third_party_user_id)
 
     return ()
 end
@@ -409,6 +409,9 @@ end
 func unlink_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     profile_address : felt, third_party_id : felt
 ):
+
+
+    third_party_unlinked_to_profile.emit(profile_address, third_party_id)
 
     return ()
 end
@@ -423,7 +426,7 @@ func assert_only_operator{
 }():
     let (caller) = get_caller_address()
     with_attr error_message("caller is the zero address"):
-        assert_not_zero(caller)
+        is_not_zero(caller)
     end
     let (is_op) = operators.read(caller)
     with_attr error_message("only operators can call this function"):
@@ -434,6 +437,17 @@ end
 ############
 #  INTERNAL 
 ############
+
+func _assert_not_already_linked{
+    syscall_ptr : felt*, 
+    pedersen_ptr : HashBuiltin*, 
+    range_check_ptr,
+    stop : felt, 
+    third_party_id : felt, 
+    profile_address : felt
+}():
+
+end
 
 func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, user_data : UpdatableByUserData
@@ -477,5 +491,26 @@ func _get_registered_addresses{
     tempvar range_check_ptr = range_check_ptr
 
     _get_registered_addresses(start + 1)
+
+end
+
+func _get_third_parties{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr,
+    stop : felt,
+    array : felt*
+}(start : felt):
+    if start == stop :
+        return ()
+    end 
+
+    let (third_party) = third_parties.read(start)
+    assert [array + start] = third_party
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+
+    _get_third_parties(start + 1)
 
 end
