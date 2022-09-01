@@ -257,6 +257,7 @@ end
 func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):
+    assert_only_operator()
     operators.write(operator, true)
     operator_added.emit(operator=operator)
     return ()
@@ -266,6 +267,7 @@ end
 func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ):
+    assert_only_operator()
     operators.write(operator, false)
     operator_removed.emit(operator)
     return ()
@@ -276,7 +278,7 @@ func create_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     reputation_reward : felt, game_id : felt
 ) -> (res : felt):
     alloc_locals
-    
+    assert_only_operator()
     let (quests_len) = quests_len.read()
     let quest_id = quests_len
     # todo : ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, profiles);
@@ -305,7 +307,7 @@ end
 func add_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     quest_id : felt, operator : felt
 ):
-    
+    assert_only_operator()
     let (quests_len) = quests_len.read()
     with_attr error_message("QuestID does not exist"):
         assert_lt(quest_id, quests_len)
@@ -321,6 +323,7 @@ end
 func remove_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     quest_id : felt, address : felt
 ):
+    assert_only_operator()
     let (quests_len) = quests_len.read()
     with_attr error_message("QuestID does not exist"):
         assert_lt(quest_id, quests_len)
@@ -337,12 +340,30 @@ end
 func add_game{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     game_name : felt
 )->(res : felt):
+    assert_only_operator()
     let (games_len) = games_len.read()
     games.write(games_len, game_name)
     game_added.emit(game_name, game_len - 1)
     return (res=game_len - 1)
 end
 
+############
+# MODIFIER
+############
+func assert_only_operator{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+}():
+    let (caller) = get_caller_address()
+    with_attr error_message("caller is the zero address"):
+        assert_not_zero(caller)
+    end
+    let (is_op) = operators.read(caller)
+    with_attr error_message("only operators can call this function"):
+        assert is_op = 1
+    end
+end
 
 ############
 # INTERNAL
@@ -402,3 +423,4 @@ func _get_game_id_to_quest_id{
     assert [array + start] = quest_id
     return _get_game_id_to_quest_id(start + 1)
 end
+
