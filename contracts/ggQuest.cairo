@@ -14,7 +14,7 @@ from starkware.cairo.common.uint256 import (
     uint256_le,
     uint256_lt,
     uint256_check,
-    assert_not_zero
+    assert_not_zero as uint_256_assert_not_zero
 )
 
 from starkware.cairo.common.math import (
@@ -31,7 +31,7 @@ from contracts.tokens.ERC20.IERC20 import IERC20
 from contracts.tokens.ERC721.IERC721 import IERC721
 #from contracts.tokens.ERC1155.IERC1155 import IERC1155
 
-from contracts.interfaces.IggProfiles import IggProfiles
+#from contracts.interfaces.IggProfiles import IggProfiles
 
 
 ############
@@ -134,7 +134,7 @@ end
 ############
 
 @constructor
-func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr} (
+func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     gg_profiles_contract : felt, reputation_reward : felt, metadata_URL : felt
 ):  
     alloc_locals
@@ -372,7 +372,7 @@ end
 # private functions
 
 func _verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    reward: Reward
+    reward : Reward
 ):
     alloc_locals
     let (contract_address) = get_contract_address()
@@ -382,7 +382,7 @@ func _verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
         let (local product : Uint256) = reward.tokenAmount * reward.amount
         with_attr error_message("ggQuest contract doesn't own enough tokens"):
             let (enough) = uint256_le(product, balance)
-            assert_not_zero(enough)
+            uint_256_assert_not_zero(enough)
         end
     else: 
         if reward.reward_type == RewardType.ERC721:
@@ -403,7 +403,7 @@ func _verifyTokenOwnershipFor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
             let (local product : Uint256) = reward.tokenAmount * reward.amount
             with_attr error_message("ggQuests contract doesn't own enough tokens"):
                 let (enough) = uint256_le(product, balance)
-                assert_not_zero(enough)
+                uint_256_assert_not_zero(enough)
             end
         end
     end
@@ -428,7 +428,7 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
         let (balance : Uint256) = IERC20.balanceOf(contract_address=reward_contract, account=contract_address)
         let (success) = IERC20.transfer(contract_address=reward_contract, balance)
         with_attr error_message("transfer ERC20 failed"):
-            assert_not_zero(success)
+            uint_256_assert_not_zero(success)
         end
     else:
         
@@ -442,7 +442,7 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
                 amount
             )
             with_attr error_message("transfer ERC721 failed"):
-                assert_not_zero(success)
+                uint_256_assert_not_zero(success)
             end
 
         else:
@@ -460,7 +460,7 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
                 0
             )
             with_attr error_message("transfer ERC1155 failed"):
-                assert_not_zero(success)
+                uint_256_assert_not_zero(success)
             end
         end
     end
@@ -486,7 +486,7 @@ func _deactivate_loop{
     withdrawal_address : felt
 }(start : Uint256):
     let (is_end_of_loop) = check_le(stop, start)
-    assert_not_zero(is_end_of_loop)
+    uint_256_assert_not_zero(is_end_of_loop)
 
     _withdraw_reward(start, withdrawal_address)
 
@@ -504,7 +504,7 @@ func _verifyUniquenessOfRewards{
     reward : Reward,
 }():
     let (is_end_of_loop) = check_le(stop, start)
-    assert_not_zero(is_end_of_loop)
+    uint_256_assert_not_zero(is_end_of_loop)
     
     let (additional_reward) = additional_rewards.read(start)
     let (rhAR) = _reward_hash(additional_reward)
@@ -530,7 +530,7 @@ func _increase_reward_token{
 }(start : Uint256):
     alloc_locals
     let (is_end_of_loop) = check_le(stop, start)
-    assert_not_zero(is_end_of_loop)
+    uint_256_assert_not_zero(is_end_of_loop)
     let (additional_reward) = additional_rewards.read(start)
     let (rhAR) = _reward_hash(additional_reward)
     let (rhR) = _reward_hash(reward)
@@ -573,7 +573,7 @@ func _send_loop_reward{
 }(start : felt):
     alloc_locals
     let (is_end_of_loop) = check_le(stop, start)
-    assert_not_zero(check_le)
+    uint_256_assert_not_zero(check_le)
     let (reward : Reward) = additional_rewards.read(start)
     let (players_len : felt) = players_len.read()
     let (enough_rewards) = uint256_le(players_len, reward.amount)
@@ -608,7 +608,7 @@ func _get_additional_rewards{
     stop : felt,
 }(start : Uint256):
     let (is_end_of_loop) = uint256_le(stop, start)
-    assert_not_zero(is_end_of_loop)
+    uint_256_assert_not_zero(is_end_of_loop)
 
     let (reward : Reward) = additional_rewards.read(start)
     assert [rewards_array + index_start * Uint256.SIZE] = reward
@@ -630,7 +630,7 @@ func _get_players{
     stop : felt,
 }(start : Uint256):
     let (is_end_of_loop) = uint256_le(stop,start)
-    assert_not_zero(is_end_of_loop)
+    uint_256_assert_not_zero(is_end_of_loop)
 
     let (player : felt) = players.read(start)
     assert [players_array + index_start * Uint256.SIZE] = player

@@ -140,7 +140,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 ):
     name.write(_name)
     ticker.write(_ticker)
-    let (caller) = get_caller_address
+    let (caller) = get_caller_address()
     operators.write(caller, 1)
     return ()
 end
@@ -163,8 +163,8 @@ func get_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
     user_address : felt
 ) -> (gained_reputation : felt, lost_reputation : felt):
     let (profile_data) = profiles.read(user_address)
-    let (gained_reputation) = profile_data.gained_reputation
-    let (lost_reputation) = profile_data.lost_reputation
+    let gained_reputation = profile_data.gained_reputation
+    let lost_reputation = profile_data.lost_reputation
     return (gained_reputation=gained_reputation, lost_reputation=lost_reputation)
 end
 
@@ -199,7 +199,7 @@ end
 @view
 func get_third_parties{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (res : felt):
-    
+    return (res=0)
 end
 
 @view
@@ -407,7 +407,7 @@ func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
 ):  
     let (current_data) = profiles.read(user_address)
     let current_pseudo = current_data.pseudo
-    let (new_pseudo) = user_data.pseudo
+    let new_pseudo = user_data.pseudo
 
     # todo : finish the body 
 
@@ -418,10 +418,10 @@ func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_chec
         user_data.cover_picture_URL, 
         current_data.is_registered ,
         current_data.gained_reputation, 
-        current_data.lost_reputation - amount
+        current_data.lost_reputation
     )
 
-    taken_psuedonymes.write(new_pseudo, 1)
+    taken_pseudonymes.write(new_pseudo, 1)
     profiles.write(caller, updated_data)
     return ()
 end
