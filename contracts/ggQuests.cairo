@@ -146,7 +146,7 @@ func get_quests{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
     alloc_locals
     let (quests_len) = quests_len.read()
     let (local quests_array : felt*) = alloc()
-    let (local start) = 0
+    local start = 0
     let stop = quests_len
 
     _get_quests{quests_array=quests_array, stop=stop}(start)
@@ -159,7 +159,7 @@ func get_games{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr
     alloc_locals
     let (games_len) = games_len.read()
     let (local games_array : felt*) = alloc()
-    let (local start) = 0
+    local start = 0
     let stop = games_len
     # to add a check if its zero
 
@@ -226,10 +226,10 @@ func get_game_id_to_quest_id{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, r
     game_id : felt
 ) -> (quest_ids_len : felt, quest_ids : felt*):
     alloc_locals
-    let (local start) = 0
+    local start = 0
     let (stop) = game_id_to_quest_id_len(game_id)
     let (local array : felt*) = alloc()
-    _get_game_id_to_quest_id_loop{array=array, game_id=game_id, stop=stop}(start)
+    _get_game_id_to_quest_id{array=array, game_id=game_id, stop=stop}(start)
     return (quest_ids_len=stop, quest_ids=array)
 end
 
@@ -282,7 +282,7 @@ func create_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     let (quests_len) = quests_len.read()
     let quest_id = quests_len
     # todo : ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, profiles);
-    let (new_quest) = 0
+    let new_quest = 0
     quests.write(quests_len, new_quest)
     quests_len.write(quests_len + 1)
 
@@ -293,7 +293,7 @@ func create_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
 
     # update after pushing quest_id to quest_ids
     let (profiles_contract) = profiles.read()
-    IggProfiles.add_operator(contract_address=profiles_contract,new_quest)
+    IggProfiles.add_operator(contract_address=profiles_contract, new_quest)
 
     let (game_name) = games.read(game_id)
     quest_created.emit(quest_id, game_name)
