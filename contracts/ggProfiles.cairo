@@ -86,7 +86,7 @@ end
 
 # linked third party per user_address
 @storage_var
-func linked_third_party_per_user(user_address : felt, index : felt) -> (third_party : felt):
+func linked_third_party_per_user(user_address : felt, index : felt) -> (third_party : ThirdParty):
 end
 
 @storage_var
@@ -428,7 +428,7 @@ func unlink_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuilt
         linked_third_party_per_user.write(profile_address, removed_index, last_item)
         # pop the last item of the array
         linked_third_party_per_user.write(profile_address, len_linked_third_parties - 1, 0)
-        
+
         linked_third_party_per_user_len.write(profile_address, len_linked_third_parties - 1)
     end
 
@@ -467,7 +467,7 @@ func _assert_not_already_linked{
     stop : felt, 
     third_party_id : felt, 
     profile_address : felt
-}():
+}(start : felt):
 
 end
 
@@ -477,10 +477,25 @@ func _verify_third_party_found{
     range_check_ptr,
     removed : felt,
     removed_index : felt,
+    profile_address : felt,
+    third_party_id : felt,
     stop : felt, 
-}():
+}(start : felt):
+    if start == stop :
+        return ()
+    end
 
+    let (third_party) = linked_third_party_per_user.read(profile_address, start)
+    if third_party.third_party_id == third_party_id:
+        removed = 1
+        removed_index = start
+        # maybe change by popping the last item
+        linked_third_party_per_user.write(profile_address, start, 0)
+        return ()
+    end
+    _verify_third_party_found(start + 1)
 end
+
 func _set_user_data{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, user_data : UpdatableByUserData
 ):  
