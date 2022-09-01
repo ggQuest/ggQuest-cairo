@@ -1,6 +1,9 @@
 %lang starknet
 
-from contracts.ggQuest import UpdatableByUserData
+from contracts.ggQuest import Reward
+from starkware.cairo.common.uint256 import (
+    Uint256
+)
 
 @contract_interface
 namespace IggQuest:
@@ -11,7 +14,7 @@ namespace IggQuest:
     func remove_operator(operator : felt):
     end
 
-    func add_reward(reward : Reward) -> (res: Uint256):
+    func add_reward(reward : Reward) -> (res : Uint256):
     end
 
     func send_reward(player : felt):

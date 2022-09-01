@@ -268,17 +268,6 @@ func mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     end
     _set_user_data(caller, user_data)
 
-    #to check
-    #let (new_user_data : ProfileData) = ProfileData(
-      #  profile_data.pseudo,
-      #  profile_data.profile_picture_URL, 
-      #  profile_data.cover_picture_URL, 
-       # 1 ,
-       # profile_data.gained_reputation, 
-       # profile_data.lost_reputation
-    #)
-
-    #profiles.write(caller, new_user_data)
     minted.emit(caller, user_data.pseudo)
     return ()
 end
@@ -460,7 +449,6 @@ func unlink_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuilt
 
         linked_third_party_per_user_len.write(profile_address, len_linked_third_parties - 1)
     end
-
 
     third_party_unlinked_to_profile.emit(profile_address, third_party_id)
 
