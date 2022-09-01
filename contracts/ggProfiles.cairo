@@ -11,6 +11,7 @@ from starkware.starknet.common.syscalls import (
 from starkware.cairo.common.math_cmp import (
     is_not_zero
 )
+from starkware.cairo.common.math import assert_not_equal
 
 
 
@@ -208,26 +209,26 @@ func get_registered_addresses{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
 ) -> (registered_addresses_len : felt, registered_addresses : felt* ):
 
     alloc_locals
-    let (registered_addresses_len) = registered_addresses_len.read()
+    let (len) = registered_addresses_len.read()
     let (local registered_addresses_array : felt*) = alloc()
-    let (local start) = 0
-    let stop = registered_addresses_len
+    local start = 0
+    let stop = len
     # to add a check if its zero
 
-    _get_registered_addresses{registered_addresses=registered_addresses_array, stop=stop}(start)
-    return (registered_addresses_len=registered_addresses_len, registered_addresses=registered_addresses_array)
+    _get_registered_addresses{registered_addresses_array=registered_addresses_array, stop=stop}(start)
+    return (registered_addresses_len=len, registered_addresses=registered_addresses_array)
 end
 
 @view 
 func get_third_parties{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (third_parties_len : felt, third_parties : felt*):
     alloc_locals
-    let (third_parties_len) = third_parties_len.read()
+    let (len) = third_parties_len.read()
     let (local third_parties : felt*) = alloc()
-    let stop = third_parties_len
-    let (local start) = 0
+    let stop = len
+    local start = 0
     _get_third_parties{stop=stop, array=third_parties}(start)
-    return (third_parties_len, third_parties)
+    return (third_parties_len=len, third_parties=third_parties)
 end
 
 ############
@@ -240,7 +241,7 @@ func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
 ):  
     assert_only_operator()
     operators.write(operator, 1)
-    operator_added(operator)
+    operator_added.emit(operator)
     return ()
 end
 
@@ -250,7 +251,7 @@ func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
 ):  
     assert_only_operator()
     operators.write(operator, 0)
-    operator_removed(operator)
+    operator_removed.emit(operator)
     return ()
 end
 
@@ -261,7 +262,7 @@ func mint{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     alloc_locals
     let (caller) = get_caller_address()
     let (profile_data) = profiles.read(caller)
-    let (is_registered) = profile_data.is_registered
+    let is_registered = profile_data.is_registered
     with_attr error_message("Profile already registered"):
         assert is_registered = 0
     end
@@ -285,14 +286,22 @@ end
 @external
 func burn{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt
-):  
+):     
+    alloc_locals
     assert_only_operator()
 
     let (profile) = profiles.read(user_address)
     taken_pseudonymes.write(profile.pseudo, 0)
 
-    let (null_object : ProfileData) = ProfileData(0,0,0,0,0,0)
-    profiles.write(user_address, null_object)
+    local null_account : ProfileData
+    assert null_account.pseudo = 0
+    assert null_account.profile_picture_URL = 0
+    assert null_account.cover_picture_URL = 0
+    assert null_account.is_registered = 0
+    assert null_account.gained_reputation = 0
+    assert null_account.lost_reputation = 0
+
+    profiles.write(user_address, null_account)
 
     burned.emit(user_address)
     return ()   
@@ -302,9 +311,10 @@ end
 func update{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_data : UpdatableByUserData
 ):
-    let (caller) = get_caller_address()
+    alloc_locals
+    let (local caller) = get_caller_address()
     let (profile_data) = profiles.read(caller)
-    let (is_registered) = profile_data.is_registered
+    let is_registered = profile_data.is_registered
     with_attr error_message("Profile not registered, please mint first"):
         assert is_registered = 1
     end
@@ -318,23 +328,24 @@ end
 func increase_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, amount : felt
 ):
+    alloc_locals
     assert_only_operator()
 
     # check profile is registered
     let (profile_data) = profiles.read(user_address)
-    let (is_registered) = profile_data.is_registered
+    let is_registered = profile_data.is_registered
     with_attr error_message("Profile not registered"):
         assert is_registered = 1
     end
 
-    let (new_user_data : ProfileData) = ProfileData(
-        profile_data.pseudo,
-        profile_data.profile_picture_URL, 
-        profile_data.cover_picture_URL, 
-        1 ,
-        profile_data.gained_reputation + amount, 
-        profile_data.lost_reputation
-    )
+    local new_user_data : ProfileData 
+    assert new_user_data.pseudo = profile_data.pseudo
+    assert new_user_data.profile_picture_URL = profile_data.profile_picture_URL
+    assert new_user_data.cover_picture_URL = profile_data.cover_picture_URL
+    assert new_user_data.is_registered = profile_data.is_registered
+    assert new_user_data.gained_reputation = profile_data.gained_reputation + amount
+    assert new_user_data.lost_reputation = profile_data.lost_reputation
+
 
     profiles.write(user_address, new_user_data)
     reputation_increased.emit(user_address, amount)
@@ -345,23 +356,23 @@ end
 func decrease_reputation{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     user_address : felt, amount : felt
 ):
+    alloc_locals
     assert_only_operator()
 
     # check profile is registered
     let (profile_data) = profiles.read(user_address)
-    let (is_registered) = profile_data.is_registered
+    let is_registered = profile_data.is_registered
     with_attr error_message("Profile not registered"):
         assert is_registered = 1
     end
 
-    let (new_user_data : ProfileData) = ProfileData(
-        profile_data.pseudo,
-        profile_data.profile_picture_URL, 
-        profile_data.cover_picture_URL, 
-        1 ,
-        profile_data.gained_reputation, 
-        profile_data.lost_reputation - amount
-    )
+    local new_user_data : ProfileData 
+    assert new_user_data.pseudo = profile_data.pseudo
+    assert new_user_data.profile_picture_URL = profile_data.profile_picture_URL
+    assert new_user_data.cover_picture_URL = profile_data.cover_picture_URL
+    assert new_user_data.is_registered = profile_data.is_registered
+    assert new_user_data.gained_reputation = profile_data.gained_reputation + amount
+    assert new_user_data.lost_reputation = profile_data.lost_reputation
 
     profiles.write(user_address, new_user_data)
     reputation_decreased.emit(user_address, amount)
@@ -384,19 +395,27 @@ end
 func link_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     profile_address : felt, third_party_id : felt, third_party_user_id : felt 
 ):
+    alloc_locals
+
     assert_only_operator()
     let (party) = third_parties.read(third_party_id)
     with_attr error_message("No third party found with this ID"):
         is_not_zero(party)
     end
     let (len_linked_third_parties) = linked_third_party_per_user_len.read(profile_address)
-    let (local start) = 0
+    local start = 0
     let stop = len_linked_third_parties
-    _assert_not_already_linked{stop=stop, third_party_id=third_party_id, profile_address=profile_address}(start)
-    let (new_third_party : ThirdParty) = ThirdParty(
-        third_party_id,
-        third_party_user_id
-    )
+
+    _assert_not_already_linked{
+        stop=stop, 
+        third_party_id=third_party_id, 
+        profile_address=profile_address
+    }(start)
+    
+    local new_third_party : ThirdParty
+    assert new_third_party.third_party_id = third_party_id
+    assert new_third_party.user_id = third_party_user_id
+
     linked_third_party_per_user.write(profile_address, len_linked_third_parties, new_third_party)
     linked_third_party_per_user_len.write(profile_address, len_linked_third_parties + 1)
     third_party_linked_to_profile.emit(profile_address, third_party_id, third_party_user_id)
@@ -409,25 +428,35 @@ end
 func unlink_third_party_to_profile{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     profile_address : felt, third_party_id : felt
 ):
+    alloc_locals
     assert_only_operator()
     let (party) = third_parties.read(third_party_id)
     with_attr error_message("No third party found with this ID"):
         is_not_zero(party)
     end
 
-    let (local removed) = 0
+    local removed = 0
     local removed_index
     let (len_linked_third_parties) = linked_third_party_per_user_len.read(profile_address)
-    let (local start) = 0
+    local start = 0
     let stop = len_linked_third_parties
 
-    _verify_third_party_found{removed=removed, removed_index=removed_index, stop=stop}(start)
+    _verify_third_party_found{
+        removed=removed, 
+        removed_index=removed_index,
+        profile_address=profile_address, 
+        third_party_id=third_party_id, 
+        stop=stop
+    }(start)
 
     if removed == 1:    
         let (last_item) = linked_third_party_per_user.read(profile_address, len_linked_third_parties - 1)
         linked_third_party_per_user.write(profile_address, removed_index, last_item)
         # pop the last item of the array
-        linked_third_party_per_user.write(profile_address, len_linked_third_parties - 1, 0)
+        local null_third_party : ThirdParty
+        assert null_third_party.third_party_id = 0
+        assert null_third_party.user_id = 0
+        linked_third_party_per_user.write(profile_address, len_linked_third_parties - 1, null_third_party)
 
         linked_third_party_per_user_len.write(profile_address, len_linked_third_parties - 1)
     end
@@ -468,7 +497,16 @@ func _assert_not_already_linked{
     third_party_id : felt, 
     profile_address : felt
 }(start : felt):
+    if start==stop:
+        return ()
+    end
 
+    let (third_party : ThirdParty) = linked_third_party_per_user.read(profile_address, start)
+    with_attr error_message("This profile is already linked to this third party"):
+        assert_not_equal(third_party.third_party_id, third_party_id)
+    end
+
+    _assert_not_already_linked(start + 1)
 end
 
 func _verify_third_party_found{
@@ -485,14 +523,22 @@ func _verify_third_party_found{
         return ()
     end
 
-    let (third_party) = linked_third_party_per_user.read(profile_address, start)
+    let (third_party : ThirdParty) = linked_third_party_per_user.read(profile_address, start)
     if third_party.third_party_id == third_party_id:
         removed = 1
         removed_index = start
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
         # maybe change by popping the last item
         linked_third_party_per_user.write(profile_address, start, 0)
         return ()
     end
+
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+    
     _verify_third_party_found(start + 1)
 end
 
