@@ -157,12 +157,11 @@ func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, ra
     alloc_locals
     let (rewards_len) = additional_rewards_len.read()
     let (local rewards_array : Reward*) = alloc()
-    let start = Uint256(0,0)
+    let(local start) = 0
     let stop = rewards_len
-    local index_start = 0
     # to add a check if its zero
     
-    _get_additional_rewards{rewards_array=rewards_array, index_start=index_start, stop=stop}(start)
+    _get_additional_rewards{rewards_array=rewards_array, stop=stop}(start)
     return (rewards_len=rewards_len, rewards=rewards_array)
 end
 
@@ -172,12 +171,11 @@ func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     alloc_locals
     let (players_len) = players_len.read()
     let (local players_array : felt*) = alloc()
-    let start = Uint256(0,0)
+    let(local start) = 0
     let stop = players_len
-    local index_start = 0
     # to add a check if its zero
 
-    _get_players{players_array=players_array, index_start=index_start, stop=stop}(start)
+    _get_players{players_array=players_array, stop=stop}(start)
     return (players_len=players_len, players=players_array)
 end
 
@@ -289,7 +287,7 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     with_attr error_message("Quest already completed by this player"):
         assert completed_by = 1
     end
-    let start = Uint256(0,0)
+    let (local start) = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
     local had_at_least_one_reward = 0
@@ -322,7 +320,7 @@ end
 func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     amount : Uint256, reward : Reward
 ):
-    let start = Uint256(0,0)
+    let (local start) = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
     let exists = 0
@@ -356,7 +354,7 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
 ):
     is_active.write(0)
     # transfer all tokens
-    let start = Uint256(0,0)
+    let (local start) = 0
     let (rewards_len) = additional_rewards_len.read()
     let stop = rewards_len
     _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
@@ -484,14 +482,14 @@ func _deactivate_loop{
     range_check_ptr,
     stop : felt, 
     withdrawal_address : felt
-}(start : Uint256):
-    let (is_end_of_loop) = check_le(stop, start)
-    uint_256_assert_not_zero(is_end_of_loop)
+}(start : felt):
+    if start == stop:
+        return ()
+    end
 
     _withdraw_reward(start, withdrawal_address)
 
-    let (next_start, _) = uint256_add(start, Uint256(1,0))
-    _deactivate_loop(next_start)
+    _deactivate_loop(start + 1)
     return ()
 end
 
@@ -502,9 +500,10 @@ func _verifyUniquenessOfRewards{
     range_check_ptr,
     stop : felt,
     reward : Reward,
-}():
-    let (is_end_of_loop) = check_le(stop, start)
-    uint_256_assert_not_zero(is_end_of_loop)
+}(start : felt):
+     if start == stop:
+        return ()
+    end
     
     let (additional_reward) = additional_rewards.read(start)
     let (rhAR) = _reward_hash(additional_reward)
@@ -514,8 +513,7 @@ func _verifyUniquenessOfRewards{
         assert_not_equal(rhAR, rhR)
     end
 
-    let (next_start, _) = uint256_add(start, Uint256(1,0))
-    _verifyUniquenessOfRewards(next_start)
+    _verifyUniquenessOfRewards(start + 1)
     return ()
 end
 
@@ -527,10 +525,13 @@ func _increase_reward_token{
     amount : felt, 
     reward : Reward,
     exists : felt
-}(start : Uint256):
+}(start : felt):
     alloc_locals
-    let (is_end_of_loop) = check_le(stop, start)
-    uint_256_assert_not_zero(is_end_of_loop)
+
+    if start == stop:
+        return ()
+    end
+
     let (additional_reward) = additional_rewards.read(start)
     let (rhAR) = _reward_hash(additional_reward)
     let (rhR) = _reward_hash(reward)
@@ -550,8 +551,7 @@ func _increase_reward_token{
         )
         additional_rewards.write(start, new_reward)       
     end
-    let (next_start, _) = uint256_add(start, Uint256(1,0))
-    _increase_reward_token(next_start)
+    _increase_reward_token(start + 1)
 end
 
 func _transfer_tokens{
@@ -560,7 +560,7 @@ func _transfer_tokens{
     range_check_ptr,
     stop : felt,
     withdraw_address : felt
-}(start : Uint256):
+}(start : felt):
 end
 
 func _send_loop_reward{
@@ -572,8 +572,10 @@ func _send_loop_reward{
     had_at_least_one_reward : felt
 }(start : felt):
     alloc_locals
-    let (is_end_of_loop) = check_le(stop, start)
-    uint_256_assert_not_zero(check_le)
+    if start == stop:
+        return ()
+    end
+
     let (reward : Reward) = additional_rewards.read(start)
     let (players_len : felt) = players_len.read()
     let (enough_rewards) = uint256_le(players_len, reward.amount)
@@ -593,8 +595,7 @@ func _send_loop_reward{
             end
         end
     end
-    let (next_start, _) = uint256_add(start, Uint256(1, 0))
-    _send_loop_reward(next_start)
+    _send_loop_reward(start + 1)
 
     return ()
 end
@@ -604,21 +605,19 @@ func _get_additional_rewards{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
     rewards_array : Reward*,
-    index_start : felt,
     stop : felt,
-}(start : Uint256):
-    let (is_end_of_loop) = uint256_le(stop, start)
-    uint_256_assert_not_zero(is_end_of_loop)
+}(start : felt):
+    if start == stop:
+        return ()
+    end
 
     let (reward : Reward) = additional_rewards.read(start)
-    assert [rewards_array + index_start * Uint256.SIZE] = reward
-    tempvar index_start = index_start + 1
+    assert [rewards_array + start] = reward
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    let (next_start, _) = uint256_add(start, Uint256(1,0))
-    _get_additional_rewards(next_start)
+    _get_additional_rewards(start + 1)
 end
 
 func _get_players{
@@ -626,19 +625,16 @@ func _get_players{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
     players_array : Reward*,
-    index_start : felt,
     stop : felt,
-}(start : Uint256):
-    let (is_end_of_loop) = uint256_le(stop,start)
-    uint_256_assert_not_zero(is_end_of_loop)
-
+}(start : felt):
+    if start == stop:
+        return ()
+    end
     let (player : felt) = players.read(start)
-    assert [players_array + index_start * Uint256.SIZE] = player
-    tempvar index_start = index_start + 1
+    assert [players_array + start] = player
     tempvar syscall_ptr = syscall_ptr
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    let (next_start, _) = uint256_add(start, Uint256(1,0))
-    _get_players(next_start)
+    _get_players(start + 1)
 end
