@@ -1,6 +1,7 @@
 %lang starknet
 
-from contracts.ggQuest import Reward
+from contracts.ggQuest.library import Reward
+
 from starkware.cairo.common.uint256 import (
     Uint256
 )

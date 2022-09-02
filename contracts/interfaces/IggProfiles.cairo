@@ -2,7 +2,7 @@
 
 from starkware.cairo.common.uint256 import Uint256
 
-from contracts.ggProfiles import UpdatableByUserData
+from contracts.ggProfiles.library import UpdatableByUserData
 
 @contract_interface
 namespace IggProfiles:
