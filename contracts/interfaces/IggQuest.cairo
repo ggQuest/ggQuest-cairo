@@ -7,7 +7,7 @@ from starkware.cairo.common.uint256 import (
 )
 
 @contract_interface
-namespace IggQuest:
+namespace IggQuest: 
 
     func add_operator(operator : felt):
     end
@@ -32,4 +32,8 @@ namespace IggQuest:
 
     func deactivate_quest(withdrawal_address : felt):
     end
+    
+    func get_quest_URI() -> (res : felt):
+    end
+    
 end

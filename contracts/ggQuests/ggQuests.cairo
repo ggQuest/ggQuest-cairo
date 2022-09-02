@@ -2,15 +2,19 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.bool import TRUE, FALSE
 
 from starkware.starknet.common.syscalls import (
     get_caller_address,
     get_contract_address
 )
-
+from starkware.cairo.common.math import (
+    assert_not_zero,
+)
 from contracts.ggQuests.library import (
     GgQuests,
     Operators,
+    Profiles,
     Games_Metadata_Base_URI,
     Quests_Metadata_Base_URI
 )
@@ -104,7 +108,7 @@ func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     Profiles.write(gg_profiles_contract)
     Games_Metadata_Base_URI.write(gamesMetadataBaseURI)
     Quests_Metadata_Base_URI.write(questsMetadataBaseURI)
-    Operators.write(caller_address, true)
+    Operators.write(caller_address, TRUE)
     return ()
 end
 
@@ -151,10 +155,10 @@ end
 
 @external
 func remove_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    quest_id : felt, address : felt
+    quest_id : felt, operator : felt
 ):
     assert_only_operator()
-    GgQuests.remove_quest_operator(quest_id, address)
+    GgQuests.remove_quest_operator(quest_id, operator)
     return ()
 end
 
@@ -185,5 +189,3 @@ func assert_only_operator{
     end
     return ()
 end
-
-

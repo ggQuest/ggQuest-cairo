@@ -2,6 +2,7 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
+from starkware.cairo.common.bool import TRUE, FALSE
 
 from starkware.starknet.common.syscalls import (
     get_caller_address,
@@ -30,7 +31,7 @@ func OperatorAdded(operator : felt):
 end
 
 @event
-func RemoveOperator(operator : felt):
+func OperatorRemoved(operator : felt):
 end
 
 @event 
@@ -79,7 +80,7 @@ func Games(game_id : felt) -> (game_name : felt):
 end
 
 @storage_var
-func Games_len() -> (len : felt):
+func Games_Len() -> (len : felt):
 end
 
 @storage_var
@@ -115,7 +116,6 @@ end
 
 namespace GgQuests:
 
-    
     func get_ggQuest_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     )-> (res : felt):
         let (contract) = Gg_Quest_Contract.read()
@@ -151,7 +151,7 @@ namespace GgQuests:
         let stop = games_len
         # to add a check if its zero
 
-        get_games_loop{games_array=games_array, index_start=index_start, stop=stop}(start)
+        get_games_loop{games_array=games_array, stop=stop}(start)
         return (games_len=games_len, games=games_array)
     end
 
@@ -226,7 +226,7 @@ namespace GgQuests:
     func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         operator : felt
     ):
-        Operators.write(operator, true)
+        Operators.write(operator, TRUE)
         OperatorAdded.emit(operator=operator)
         return ()
     end
@@ -235,7 +235,7 @@ namespace GgQuests:
     func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         operator : felt
     ):
-        Operators.write(operator, false)
+        Operators.write(operator, FALSE)
         OperatorRemoved.emit(operator)
         return ()
     end
@@ -247,7 +247,7 @@ namespace GgQuests:
         alloc_locals
         let (quests_len) = Quests_Len.read()
         let quest_id = quests_len
-        # todo : ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, Profiles);
+        # todo : deploy here ggQuest newQuest = new ggQuest(string(abi.encodePacked(questsMetadataBaseURI, Strings.toString(questId))), _reputationReward, Profiles);
         let new_quest = 0
         Quests.write(quests_len, new_quest)
         Quests_Len.write(quests_len + 1)
@@ -279,14 +279,14 @@ namespace GgQuests:
         end
         let (gg_quest_address) = Quests.read(quest_id)
 
-        IggQuest.add_operator(contract_address=gg_quest_address, operator)
+        IggQuest.add_operator(contract_address=gg_quest_address, operator=operator)
         return ()
 
     end
 
     
     func remove_quest_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        quest_id : felt, address : felt
+        quest_id : felt, operator : felt
     ):
         let (quests_len) = Quests_Len.read()
         with_attr error_message("QuestID does not exist"):
@@ -294,7 +294,7 @@ namespace GgQuests:
         end
         let (gg_quest_address) = Quests.read(quest_id)
 
-        IggQuest.remove_operator(contract_address=gg_quest_address, operator)
+        IggQuest.remove_operator(contract_address=gg_quest_address, operator=operator)
         return ()
 
     end
@@ -306,8 +306,8 @@ namespace GgQuests:
     )->(res : felt):
         let (games_len) = Games_Len.read()
         Games.write(games_len, game_name)
-        GameAdded.emit(game_name, game_len - 1)
-        return (res=game_len - 1)
+        GameAdded.emit(game_name, games_len - 1)
+        return (res=games_len - 1)
     end
 end
 
@@ -367,7 +367,7 @@ func get_game_id_to_quest_id_loop{
     if start == stop:
         return ()
     end
-    let (quest_id) = Game_Id_To_Quest_Id.read(game_id, start)
+    let (quest_id) = Game_Id_To_Quest_Ids.read(game_id, start)
     assert [array + start] = quest_id
     return get_game_id_to_quest_id_loop(start + 1)
 end
