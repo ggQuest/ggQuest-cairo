@@ -8,7 +8,7 @@ namespace IERC1155:
     end
 
     func safeTransferFrom(
-        _from : felt, to : felt, token_id : Uint256, data_len : felt, data : felt*
+        _from : felt, to : felt, token_id : Uint256, amount : Uint256
     ):
     end
 

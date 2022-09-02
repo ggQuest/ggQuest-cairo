@@ -14,7 +14,8 @@ from starkware.cairo.common.cairo_keccak.keccak import keccak_felts, finalize_ke
 
 from starkware.cairo.common.math import (
     assert_not_equal,
-    assert_lt_felt
+    assert_lt_felt,
+    split_felt
 )
 from starkware.cairo.common.uint256 import (
     Uint256,
@@ -24,7 +25,8 @@ from starkware.cairo.common.uint256 import (
     uint256_lt,
     uint256_check,
     assert_not_zero,
-    uint256_mul
+    uint256_mul,
+    uint256_eq
 )
 from contracts.interfaces.IggProfiles import IggProfiles
 
@@ -449,18 +451,13 @@ func withdraw_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
                 contract_address=reward_contract,
                 owner=contract_address
             )
-            # todo
-            #IERC1155.safeTransferFrom(
-               # contract_address=reward_contract,
-                #_from=contract_address,
-               # to=withdrawal_address,
-               # token_id=amount,
-               # data_len=balance,
-               # 0
-            #)
-            #with_attr error_message("transfer ERC1155 failed"):
-                #assert_not_zero(success)
-            #end
+            IERC1155.safeTransferFrom(
+                contract_address=reward_contract,
+                _from=contract_address,
+                to=withdrawal_address,
+                token_id=amount,
+                amount=balance,
+            )
             tempvar syscall_ptr = syscall_ptr
             tempvar pedersen_ptr = pedersen_ptr
             tempvar range_check_ptr = range_check_ptr
@@ -485,7 +482,20 @@ func _uint_to_felt{
     return (value.high * (2 ** 128) + value.low)
 end
 
-func _reward_hash{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*, }(
+
+func _felt_to_uint{
+        syscall_ptr: felt*,
+        pedersen_ptr: HashBuiltin*,
+        range_check_ptr
+    } (value: felt) -> (value: Uint256):
+    let (high, low) = split_felt(value)
+    tempvar res: Uint256
+    res.high = high
+    res.low = low
+    return (res)
+end
+
+func _reward_hash{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin* }(
     reward : Reward
 ) -> (bytes : Uint256):
     alloc_locals
@@ -525,30 +535,34 @@ end
 func verify_uniqueness_of_rewards_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
+    bitwise_ptr : BitwiseBuiltin*,
     range_check_ptr,
     stop : felt,
     reward : Reward,
 }(start : felt):
-     if start == stop:
+    alloc_locals
+    if start == stop:
         return ()
     end
     
     let (additional_reward) = Additional_Rewards.read(start)
-    let (rhAR) = _reward_hash(additional_reward)
-    let (rhR) = _reward_hash(reward)
+    let (local rhAR) = _reward_hash(additional_reward)
+    let (local rhR) = _reward_hash(reward)
 
     with_attr error_message("Token contract already used in another reward of the quest"):
-        assert_not_equal(rhAR, rhR)
+        let (res) = uint256_eq(rhAR, rhR)
+        assert res = 0
     end
-
+    
     return verify_uniqueness_of_rewards_loop(start + 1)
-    return ()
+    
 end
 
 func increase_reward_token_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
+    bitwise_ptr : BitwiseBuiltin*,
     stop : felt, 
     amount : felt, 
     reward : Reward,
@@ -563,22 +577,36 @@ func increase_reward_token_loop{
     let (additional_reward) = Additional_Rewards.read(start)
     let (rhAR) = _reward_hash(additional_reward)
     let (rhR) = _reward_hash(reward)
-    if rhAR == rhR :
+    let (res) = uint256_eq(rhAR, rhR)
+    if  res == 1 :
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr 
+
         tempvar exists = TRUE
         let (local reward_test : Reward) = Additional_Rewards.read(start)
         let (players_len) = Players_Len.read()
-        let (local amount_test) = reward_test.amount + amount - players_len
+        let (converted) = _uint_to_felt(reward_test.amount)
+        local amount_test = converted + amount - players_len
         
         _verifyTokenOwnershipFor(reward_test)
+        let (amount_uint : Uint256) = _felt_to_uint(amount)
+        
         local new_reward : Reward
         assert new_reward.reward_type = additional_reward.reward_type
         assert new_reward.reward_contract = additional_reward.reward_contract
         assert new_reward.token_amount = additional_reward.token_amount
-        assert new_reward.amount = additional_reward.amount + amount
+        let (res_add : Uint256, _) = uint256_add(additional_reward.amount, amount_uint)
+        assert new_reward.amount = res_add
         assert new_reward.id = additional_reward.id
            
-        Additional_Rewards.write(start, new_reward)       
+        Additional_Rewards.write(start, new_reward)    
     end
+
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+
     return increase_reward_token_loop(start + 1)
 end
 
@@ -589,6 +617,7 @@ func _transfer_tokens{
     stop : felt,
     withdraw_address : felt
 }(start : felt):
+    return (0)
 end
 
 func send_reward_loop{
@@ -613,15 +642,33 @@ func send_reward_loop{
         let token_address = reward.reward_contract
 
         if reward.reward_type == RewardType.ERC20:
-            IERC20.transfer(contract_address=token_address, player, reward.token_amount)
+            let (success) = IERC20.transfer(contract_address=token_address, player, reward.token_amount)
+            with_attr error_message("ggQuest::library : transfer ERC20 failed "):
+                assert success = 1
+            end
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr
         else:
             if reward.reward_type == RewardType.ERC721:
-            let (contract_add) = get_contract_address()
-                IERC721.safeTransferFrom(contract_address=token_address, contract_add, player, reward.reward_id)
+                let (contract_add) = get_contract_address()
+                IERC721.transferFrom(contract_address=token_address, _from=contract_add, to=player, token_id=reward.reward_id)
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
             else :
-                IERC1155.safeTransferFrom(contract_address=token_address, contract_add, player, reward.reward_id, reward.token_amount, 0)
+                IERC1155.safeTransferFrom(contract_address=token_address, _from=contract_add, to=player, token_id=reward.reward_id, amount=reward.token_amount)
+                tempvar syscall_ptr = syscall_ptr
+                tempvar pedersen_ptr = pedersen_ptr
+                tempvar range_check_ptr = range_check_ptr
             end
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr
         end
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
     end
    return send_reward_loop(start + 1)
 
