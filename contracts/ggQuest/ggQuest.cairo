@@ -8,6 +8,21 @@ from starkware.starknet.common.syscalls import (
 )
 from starkware.cairo.common.bool import TRUE, FALSE
 
+from starkware.cairo.common.uint256 import (
+    Uint256, 
+    uint256_add,
+    uint256_sub,
+    uint256_mul,
+    uint256_le,
+    uint256_lt,
+    uint256_check,
+    assert_not_zero as uint_256_assert_not_zero
+)
+
+from starkware.cairo.common.math import (
+    assert_not_zero
+)
+
 
 from contracts.ggQuest.library import (
     GgQuest,
@@ -43,52 +58,52 @@ end
 @view
 func get_additional_rewards{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (rewards_len : felt , rewards : Reward*):
-   
+   return GgQuest.get_additional_rewards()
 end
 
 @view
 func get_players{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (players_len : felt, players : felt*):
-   
+    return GgQuest.get_players()
 end
 
 
 @view
 func get_quest_URI{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-   
+    return GgQuest.get_quest_URI()  
 end
 
 @view
 func is_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     operator : felt
 ) -> (res : felt):
-    
+    return GgQuest.is_operator(operator)  
 end
 
 @view
 func get_active{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ) -> (res : felt):
-    
+    return GgQuest.get_active()  
 end
 
 @view
 func is_completed_by{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     address : felt
 ) -> (res : felt):
-    
+    return GgQuest.is_completed_by(address)  
 end
 
 @view
 func get_ggProfile_address{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-    
+    return GgQuest.get_ggProfile_address()  
 end
 
 @view
 func get_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 )-> (res : felt):
-    
+    return GgQuest.get_reputation_reward()  
 end
 
 ############
@@ -100,8 +115,7 @@ func add_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     operator : felt
 ):
     assert_only_operator()
-   
-
+    GgQuest.add_operator(operator)
     return ()
 end
 
@@ -110,8 +124,7 @@ func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     operator : felt
 ):
     assert_only_operator()
-  
-
+    GgQuest.remove_operator(operator)
     return ()
 end
 
@@ -121,7 +134,7 @@ func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_pt
 ) -> (res : felt):
     assert_only_operator()
 
-   
+   return GgQuest.add_reward(reward)
 end
 
 @external
@@ -129,14 +142,16 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
     player : felt
 ):   
     assert_only_operator()
-
+    GgQuest.send_reward(player)
+    return ()
 end
 
 @external
 func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     amount : Uint256, reward : Reward
 ):
-  
+    GgQuest.increase_reward_amount(amount, reward)
+    return ()
 end
 
 @external
@@ -144,14 +159,16 @@ func update_reputation_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, 
     new_value : felt
 ):
     assert_only_operator()
-
+    GgQuest.update_reputation_reward(new_value)
+    return ()
 end
 
 @external
 func activate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
 ):
     assert_only_operator()
-
+    GgQuest.activate_quest()
+    return ()
 end
 
 @external
@@ -159,6 +176,8 @@ func deactivate_quest{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_ch
     withdrawal_address : felt
 ):
     assert_only_operator()
+    GgQuest.deactivate_quest(withdrawal_address)
+    return ()
 end
 
 ############
