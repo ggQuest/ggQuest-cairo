@@ -413,9 +413,17 @@ namespace GgProfiles:
             assert null_third_party.third_party_id = 0
             assert null_third_party.user_id = 0
             Linked_Third_Party_Per_User.write(profile_address, len_linked_third_parties - 1, null_third_party)
-
             Linked_Third_Party_Per_User_Len.write(profile_address, len_linked_third_parties - 1)
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr 
+        else :  
+            tempvar syscall_ptr = syscall_ptr
+            tempvar pedersen_ptr = pedersen_ptr
+            tempvar range_check_ptr = range_check_ptr
         end
+
+        
 
         ThirdPartyUnlinkedToProfile.emit(profile_address, third_party_id)
 
