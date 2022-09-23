@@ -135,9 +135,9 @@ namespace GgQuests:
         let (quests_len) = Quests_Len.read()
         let (local quests_array : felt*) = alloc()
         local start = 0
-        let stop = quests_len
+        local stop = quests_len
 
-        get_quests_loop{quests_array=quests_array, stop=stop}(start)
+        _get_quests_loop{quests_array=quests_array, stop=stop}(start)
         return (quests_len=quests_len, quests=quests_array)
     end
 
@@ -151,7 +151,7 @@ namespace GgQuests:
         let stop = games_len
         # to add a check if its zero
 
-        get_games_loop{games_array=games_array, stop=stop}(start)
+        _get_games_loop{games_array=games_array, stop=stop}(start)
         return (games_len=games_len, games=games_array)
     end
 
@@ -217,7 +217,7 @@ namespace GgQuests:
         local start = 0
         let (stop) = Game_Id_To_Quest_Ids_Len.read(game_id)
         let (local array : felt*) = alloc()
-        get_game_id_to_quest_id_loop{array=array, game_id=game_id, stop=stop}(start)
+        _get_game_id_to_quest_id_loop{array=array, game_id=game_id, stop=stop}(start)
         return (quest_ids_len=stop, quest_ids=array)
     end
 
@@ -316,7 +316,7 @@ end
 # INTERNAL
 ############
 
-func get_quests_loop{
+func _get_quests_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -333,10 +333,10 @@ func get_quests_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    return get_quests_loop(start + 1)
+    return _get_quests_loop(start + 1)
 end
 
-func get_games_loop{
+func _get_games_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -353,10 +353,10 @@ func get_games_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    return get_games_loop(start + 1)
+    return _get_games_loop(start + 1)
 end
 
-func get_game_id_to_quest_id_loop{
+func _get_game_id_to_quest_id_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -369,5 +369,5 @@ func get_game_id_to_quest_id_loop{
     end
     let (quest_id) = Game_Id_To_Quest_Ids.read(game_id, start)
     assert [array + start] = quest_id
-    return get_game_id_to_quest_id_loop(start + 1)
+    return _get_game_id_to_quest_id_loop(start + 1)
 end

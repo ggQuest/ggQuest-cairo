@@ -2,7 +2,7 @@
 
 from starkware.cairo.common.cairo_builtins import (
     HashBuiltin, BitwiseBuiltin
-)
+) 
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import (
     get_caller_address,
@@ -141,7 +141,7 @@ namespace GgQuest:
         let stop = rewards_len
         # to add a check if its zero
         
-        get_additional_rewards_loop{rewards_array=rewards_array, stop=stop}(start)
+        _get_additional_rewards_loop{rewards_array=rewards_array, stop=stop}(start)
         return (rewards_len=rewards_len, rewards=rewards_array)
     end
 
@@ -155,7 +155,7 @@ namespace GgQuest:
         let stop = players_len
         # to add a check if its zero
 
-        get_players_loop{players_array=players_array, stop=stop}(start)
+        _get_players_loop{players_array=players_array, stop=stop}(start)
         return (players_len=players_len, players=players_array)
     end
 
@@ -219,7 +219,7 @@ namespace GgQuest:
         operator : felt
     ):
         Operators.write(operator, TRUE)
-        OperatorRemoved(operator)
+        OperatorRemoved.emit(operator)
 
         return ()
     end
@@ -241,13 +241,13 @@ namespace GgQuest:
         let stop = rewards_len
 
         # loop to check if rewards are unique
-        verify_uniqueness_of_rewards_loop{stop=stop, reward=reward}(start)
+        _verify_uniqueness_of_rewards_loop{stop=stop, reward=reward}(start)
 
         _verifyTokenOwnershipFor(reward)
 
         Additional_Rewards.write(rewards_len, reward)
         Additional_Rewards_Len.write(rewards_len + 1)
-
+ 
         RewardAdded.emit(reward)
 
         return (res=rewards_len - 1)
@@ -267,7 +267,7 @@ namespace GgQuest:
         let (rewards_len) = Additional_Rewards_Len.read()
         let stop = rewards_len
         local had_at_least_one_reward = FALSE
-        send_reward_loop{
+        _send_reward_loop{
             player=player, 
             stop=stop, 
             had_at_least_one_reward=had_at_least_one_reward
@@ -281,7 +281,7 @@ namespace GgQuest:
         # push player in players array
         Players.write(players_len, player)
         Players_Len.write(players_len + 1)
-        Completed_By.write(player, 1)
+        Completed_By.write(player, TRUE)
 
         let (profiles) = Profiles.read()
         let (reputation_reward) = Reputation_Reward.read()
@@ -301,7 +301,7 @@ namespace GgQuest:
         let (rewards_len) = Additional_Rewards_Len.read()
         let stop = rewards_len
         local exists = FALSE
-        increase_reward_token_loop{stop=stop, amount=amount, reward=reward, exists=exists}(start)
+        _increase_reward_token_loop{stop=stop, amount=amount, reward=reward, exists=exists}(start)
         with_attr error_message("Given reward (token address) doesn't exist for this quest"):
             assert exists = TRUE
         end
@@ -336,7 +336,7 @@ namespace GgQuest:
         local start = 0
         let (rewards_len) = Additional_Rewards_Len.read()
         let stop = rewards_len
-        deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
+        _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
         QuestDeactivated.emit()
         return ()
     end
@@ -474,20 +474,20 @@ end
 #  INTERNAL 
 ############
 func _uint_to_felt{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    } (value: Uint256) -> (value: felt):
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+} (value: Uint256) -> (value: felt):
     assert_lt_felt(value.high, 2**123)
     return (value.high * (2 ** 128) + value.low)
 end
 
 
 func _felt_to_uint{
-        syscall_ptr: felt*,
-        pedersen_ptr: HashBuiltin*,
-        range_check_ptr
-    } (value: felt) -> (value: Uint256):
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+} (value: felt) -> (value: Uint256):
     let (high, low) = split_felt(value)
     tempvar res: Uint256
     res.high = high
@@ -515,7 +515,7 @@ func _reward_hash{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_
     return (bytes=keccak_hash)
 end
 
-func deactivate_loop{
+func _deactivate_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -528,11 +528,11 @@ func deactivate_loop{
 
     withdraw_reward(start, withdrawal_address)
 
-    return deactivate_loop(start + 1)
+    return _deactivate_loop(start + 1)
 end
 
 #todo
-func verify_uniqueness_of_rewards_loop{
+func _verify_uniqueness_of_rewards_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     bitwise_ptr : BitwiseBuiltin*,
@@ -554,11 +554,11 @@ func verify_uniqueness_of_rewards_loop{
         assert res = 0
     end
     
-    return verify_uniqueness_of_rewards_loop(start + 1)
+    return _verify_uniqueness_of_rewards_loop(start + 1)
     
 end
 
-func increase_reward_token_loop{
+func _increase_reward_token_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -578,12 +578,8 @@ func increase_reward_token_loop{
     let (rhAR) = _reward_hash(additional_reward)
     let (rhR) = _reward_hash(reward)
     let (res) = uint256_eq(rhAR, rhR)
-    if  res == 1 :
-        tempvar syscall_ptr = syscall_ptr
-        tempvar pedersen_ptr = pedersen_ptr
-        tempvar range_check_ptr = range_check_ptr 
 
-        tempvar exists = TRUE
+    if  res == 1 :
         let (local reward_test : Reward) = Additional_Rewards.read(start)
         let (players_len) = Players_Len.read()
         let (converted) = _uint_to_felt(reward_test.amount)
@@ -601,13 +597,19 @@ func increase_reward_token_loop{
         assert new_reward.id = additional_reward.id
            
         Additional_Rewards.write(start, new_reward)    
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr 
+        tempvar exists = TRUE
+
+    else :
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+        tempvar exists = exists
     end
 
-    tempvar syscall_ptr = syscall_ptr
-    tempvar pedersen_ptr = pedersen_ptr
-    tempvar range_check_ptr = range_check_ptr
-
-    return increase_reward_token_loop(start + 1)
+    return _increase_reward_token_loop(start + 1)
 end
 
 func _transfer_tokens{
@@ -617,10 +619,10 @@ func _transfer_tokens{
     stop : felt,
     withdraw_address : felt
 }(start : felt):
-    return (0)
+    return ()
 end
 
-func send_reward_loop{
+func _send_reward_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -635,14 +637,14 @@ func send_reward_loop{
 
     let (reward : Reward) = Additional_Rewards.read(start)
     let (players_len : felt) = Players_Len.read()
-    let (enough_rewards) = uint256_le(players_len, reward.amount)
+    let (players_len_u: Uint256) = _felt_to_uint(players_len)
+    let (enough_rewards) = uint256_le(players_len_u, reward.amount)
     
     if enough_rewards == 1 :
-        tempvar had_at_least_one_reward = TRUE
         let token_address = reward.reward_contract
 
         if reward.reward_type == RewardType.ERC20:
-            let (success) = IERC20.transfer(contract_address=token_address, player, reward.token_amount)
+            let (success) = IERC20.transfer(contract_address=token_address, recipient=player, amount=reward.token_amount)
             with_attr error_message("ggQuest::library : transfer ERC20 failed "):
                 assert success = 1
             end
@@ -650,14 +652,14 @@ func send_reward_loop{
             tempvar pedersen_ptr = pedersen_ptr
             tempvar range_check_ptr = range_check_ptr
         else:
+            let (contract_add) = get_contract_address()
             if reward.reward_type == RewardType.ERC721:
-                let (contract_add) = get_contract_address()
-                IERC721.transferFrom(contract_address=token_address, _from=contract_add, to=player, token_id=reward.reward_id)
+                IERC721.transferFrom(contract_address=token_address, _from=contract_add, to=player, token_id=reward.id)
                 tempvar syscall_ptr = syscall_ptr
                 tempvar pedersen_ptr = pedersen_ptr
                 tempvar range_check_ptr = range_check_ptr
             else :
-                IERC1155.safeTransferFrom(contract_address=token_address, _from=contract_add, to=player, token_id=reward.reward_id, amount=reward.token_amount)
+                IERC1155.safeTransferFrom(contract_address=token_address, _from=contract_add, to=player, token_id=reward.id, amount=reward.token_amount)
                 tempvar syscall_ptr = syscall_ptr
                 tempvar pedersen_ptr = pedersen_ptr
                 tempvar range_check_ptr = range_check_ptr
@@ -666,15 +668,21 @@ func send_reward_loop{
             tempvar pedersen_ptr = pedersen_ptr
             tempvar range_check_ptr = range_check_ptr
         end
+        tempvar had_at_least_one_reward = TRUE
+        tempvar syscall_ptr = syscall_ptr
+        tempvar pedersen_ptr = pedersen_ptr
+        tempvar range_check_ptr = range_check_ptr
+    else :
+        tempvar had_at_least_one_reward = had_at_least_one_reward
         tempvar syscall_ptr = syscall_ptr
         tempvar pedersen_ptr = pedersen_ptr
         tempvar range_check_ptr = range_check_ptr
     end
-   return send_reward_loop(start + 1)
+   return _send_reward_loop(start + 1)
 
 end
 
-func get_additional_rewards_loop{
+func _get_additional_rewards_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -691,10 +699,10 @@ func get_additional_rewards_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    return get_additional_rewards_loop(start + 1)
+    return _get_additional_rewards_loop(start + 1)
 end
 
-func get_players_loop{
+func _get_players_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr,
@@ -710,5 +718,5 @@ func get_players_loop{
     tempvar pedersen_ptr = pedersen_ptr
     tempvar range_check_ptr = range_check_ptr
 
-    return get_players_loop(start + 1)
+    return _get_players_loop(start + 1)
 end

@@ -41,7 +41,7 @@ from contracts.ggQuest.library import (
 func constructor{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
     gg_profiles_contract : felt, reputation_reward : felt, metadata_URL : felt
 ):  
-    alloc_locals
+    alloc_locals 
     Metadata_URL.write(metadata_URL)
     Reputation_Reward.write(reputation_reward)
     Profiles.write(gg_profiles_contract)
@@ -198,4 +198,3 @@ func assert_only_operator{
     end
     return ()
 end
-
