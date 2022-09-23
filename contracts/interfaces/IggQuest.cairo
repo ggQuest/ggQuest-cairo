@@ -15,13 +15,13 @@ namespace IggQuest:
     func remove_operator(operator : felt):
     end
 
-    func add_reward(reward : Reward) -> (res : Uint256):
+    func add_reward(reward : Reward) -> (res : felt):
     end
 
     func send_reward(player : felt):
     end
 
-    func increase_reward_amount(amount : Uint256, reward : Reward):
+    func increase_reward_amount(amount : felt, reward : Reward):
     end
 
     func update_reputation_reward(new_value : felt):

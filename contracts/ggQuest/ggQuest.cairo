@@ -1,6 +1,6 @@
 %lang starknet
 
-from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import (
     get_caller_address,
@@ -127,9 +127,9 @@ func remove_operator{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_che
     GgQuest.remove_operator(operator)
     return ()
 end
-
+ 
 @external
-func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
     reward : Reward
 ) -> (res : felt):
     assert_only_operator()
@@ -143,12 +143,12 @@ func send_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_p
 ):   
     assert_only_operator()
     GgQuest.send_reward(player)
-    return ()
+    return () 
 end
 
 @external
-func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-    amount : Uint256, reward : Reward
+func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+    amount : felt, reward : Reward
 ):
     GgQuest.increase_reward_amount(amount, reward)
     return ()
@@ -191,7 +191,7 @@ func assert_only_operator{
     let (caller) = get_caller_address()
     with_attr error_message("caller is the zero address"):
         assert_not_zero(caller)
-    end
+    end 
     let (is_op) = Operators.read(caller)
     with_attr error_message("only operators can call this function"):
         assert is_op = TRUE

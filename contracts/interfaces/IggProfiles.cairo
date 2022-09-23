@@ -22,10 +22,10 @@ namespace IggProfiles:
     func update(user_data : UpdatableByUserData):
     end
 
-    func increase_reputation(user_address : felt, amount : Uint256):
+    func increase_reputation(user_address : felt, amount : felt):
     end
 
-    func decrease_reputation(user_address : felt, amount : Uint256):
+    func decrease_reputation(user_address : felt, amount : felt):
     end
 
     func add_third_party(third_party_name : felt):

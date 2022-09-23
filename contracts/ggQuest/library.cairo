@@ -225,7 +225,7 @@ namespace GgQuest:
     end
 
     
-    func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
+    func add_reward{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         reward : Reward
     ) -> (res : felt):
         alloc_locals
@@ -241,7 +241,7 @@ namespace GgQuest:
         let stop = rewards_len
 
         # loop to check if rewards are unique
-        _verify_uniqueness_of_rewards_loop{stop=stop, reward=reward}(start)
+        _verify_uniqueness_of_rewards_loop{bitwise_ptr=bitwise_ptr, stop=stop, reward=reward}(start)
 
         _verifyTokenOwnershipFor(reward)
 
@@ -282,26 +282,27 @@ namespace GgQuest:
         Players.write(players_len, player)
         Players_Len.write(players_len + 1)
         Completed_By.write(player, TRUE)
-
+ 
         let (profiles) = Profiles.read()
         let (reputation_reward) = Reputation_Reward.read()
-        IggProfiles.increase_reputation(contract_address=profiles, player, reputation_reward)
+        IggProfiles.increase_reputation(contract_address=profiles, user_address=player, amount=reputation_reward)
 
         #todo 
         #let (local reward : Reward) = Reward(RewardType.ERC20, 0, Uint256(0,0), Uint256(0,0), 0)
         RewardSent.emit(player)
+        return ()
     end
 
     
-    func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
-        amount : Uint256, reward : Reward
+    func increase_reward_amount{syscall_ptr : felt*, pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        amount : felt, reward : Reward
     ):
         alloc_locals
         local start = 0
         let (rewards_len) = Additional_Rewards_Len.read()
         let stop = rewards_len
         local exists = FALSE
-        _increase_reward_token_loop{stop=stop, amount=amount, reward=reward, exists=exists}(start)
+        _increase_reward_token_loop{bitwise_ptr=bitwise_ptr, stop=stop, amount=amount, reward=reward, exists=exists}(start)
         with_attr error_message("Given reward (token address) doesn't exist for this quest"):
             assert exists = TRUE
         end
@@ -337,7 +338,7 @@ namespace GgQuest:
         let (rewards_len) = Additional_Rewards_Len.read()
         let stop = rewards_len
         _deactivate_loop{stop=stop, withdrawal_address=withdrawal_address}(start)
-        QuestDeactivated.emit()
+        QuestDeactivated.emit(withdraw_address=withdrawal_address)
         return ()
     end
 
@@ -531,12 +532,12 @@ func _deactivate_loop{
     return _deactivate_loop(start + 1)
 end
 
-#todo
+#todo 
 func _verify_uniqueness_of_rewards_loop{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
-    bitwise_ptr : BitwiseBuiltin*,
     range_check_ptr,
+    bitwise_ptr : BitwiseBuiltin*,
     stop : felt,
     reward : Reward,
 }(start : felt):
