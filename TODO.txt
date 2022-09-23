@@ -1,0 +1,2 @@
+1. Add sanity checks for non negative numbers
+2. Tets everything on testnet
